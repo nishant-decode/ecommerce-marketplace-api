@@ -1,11 +1,14 @@
 const express = require("express");
 const { SellerController } = require("../controllers/seller.controllers");
-const { Auth } = require("../middlewares/auth.middlewares");
+const { ProductController } = require("../controllers/product.controllers");
+const { ServiceController } = require("../controllers/service.controllers");
+// const { EventController } = require("../controllers/event.controllers");
+const { SellerAuth } = require("../middlewares/sellerAuth.middlewares");
 const router = express.Router();
 
 //get requests
-router.get("/",Auth,SellerController.getAllUsers)
-router.get("/:id",Auth,SellerController.getUser)
+router.get("/",SellerAuth,SellerController.getAllUsers)
+router.get("/:id",SellerAuth,SellerController.getUser)
 
 //post requests
 router.post("/register", SellerController.register);
@@ -15,13 +18,20 @@ router.post("/verifyOtp",SellerController.verifyOtp);
 router.post("/login",SellerController.login);
 router.post("/sendToken",SellerController.sendToken);
 router.post("/verifyToken",SellerController.verifyToken);
-router.post("/resetPassword",Auth,SellerController.resetPassword);
+router.post("/resetPassword",SellerAuth,SellerController.resetPassword);
+
+router.post("/:id/products/listProduct",SellerAuth,ProductController.listProduct);
+router.post("/:id/services/listService",SellerAuth,ServiceController.listService);
+// router.post("/:id/events/listEvent",SellerAuth,EventController.listEvent);
 
 //put requests
-router.put("/:id",Auth,SellerController.updateUser)
+router.put("/:id",SellerAuth,SellerController.updateUser)
 
 //delete requests
-router.delete("/:id",Auth,SellerController.deleteUser)
+router.delete("/:id",SellerAuth,SellerController.deleteUser)
+
+//patch requests
+router.patch("/:id",SellerAuth,SellerController.createStore)
 
 //customScripts
 

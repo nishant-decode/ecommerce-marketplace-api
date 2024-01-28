@@ -158,7 +158,7 @@ class BasicUserController {
 
     if (
       !user ||
-      !(await user.schema.methods.verifyPassword(password, user.password)) ||
+      !(user.schema.methods.verifyPassword(password, user.password)) ||
       !user.emailVerified
     ) {
       throw new HttpError(401, "User does not exsist!");

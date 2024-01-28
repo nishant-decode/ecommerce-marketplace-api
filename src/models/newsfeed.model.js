@@ -1,6 +1,6 @@
 const mongoose = require("mongoose");
 
-const newsfeedSchema = new mongoose.Schema(
+const schema = new mongoose.Schema(
   {
     sellerId: {
       type: mongoose.Schema.Types.ObjectId,
@@ -54,6 +54,6 @@ const newsfeedSchema = new mongoose.Schema(
   }
 );
 
-const Newsfeed = mongoose.model("Newsfeed", newsfeedSchema);
+const Newsfeed = mongoose.model("Newsfeed", schema);
 
 module.exports.Newfeed = Newsfeed;

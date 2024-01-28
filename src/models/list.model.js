@@ -1,6 +1,6 @@
 const mongoose = require("mongoose");
 
-const listSchema = mongoose.Schema(
+const schema = mongoose.Schema(
   {
     name: {
       type: String,
@@ -35,6 +35,6 @@ const listSchema = mongoose.Schema(
   }
 );
 
-const List = mongoose.model("List", listSchema);
+const List = mongoose.model("List", schema);
 
 module.exports.List = List;

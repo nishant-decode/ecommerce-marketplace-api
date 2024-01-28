@@ -8,6 +8,6 @@ module.exports = async (app) => {
   
   //Starting Server
   app.listen(PORT || 3001, () => {
-    Logger.info("🚀 Server is Running on PORT =>", PORT || 3001);
+    Logger.info(`🚀 Server is Running on PORT => ${PORT}`, PORT || 3001);
   });
 };

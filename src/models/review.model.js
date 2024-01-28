@@ -1,6 +1,6 @@
 const mongoose = require("mongoose");
 
-const reviewSchema = new mongoose.Schema(
+const schema = new mongoose.Schema(
   {
     userId: {
       type: mongoose.Schema.Types.ObjectId,
@@ -62,3 +62,7 @@ const reviewSchema = new mongoose.Schema(
     timestamps: true,
   }
 );
+
+const Review = mongoose.model("Review", schema);
+
+module.exports.Review = Service;
