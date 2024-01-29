@@ -65,4 +65,4 @@ const schema = new mongoose.Schema(
 
 const Review = mongoose.model("Review", schema);
 
-module.exports.Review = Service;
+module.exports.Review = Review;

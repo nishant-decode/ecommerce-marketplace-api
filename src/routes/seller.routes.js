@@ -2,7 +2,8 @@ const express = require("express");
 const { SellerController } = require("../controllers/seller.controllers");
 const { ProductController } = require("../controllers/product.controllers");
 const { ServiceController } = require("../controllers/service.controllers");
-// const { EventController } = require("../controllers/event.controllers");
+const { EventController } = require("../controllers/event.controllers");
+const { NewsfeedController } = require("../controllers/newsfeed.controllers");
 const { SellerAuth } = require("../middlewares/sellerAuth.middlewares");
 const router = express.Router();
 
@@ -22,7 +23,9 @@ router.post("/resetPassword",SellerAuth,SellerController.resetPassword);
 
 router.post("/:id/products/listProduct",SellerAuth,ProductController.listProduct);
 router.post("/:id/services/listService",SellerAuth,ServiceController.listService);
-// router.post("/:id/events/listEvent",SellerAuth,EventController.listEvent);
+router.post("/:id/events/listEvent",SellerAuth,EventController.listEvent);
+
+router.post("/:id/newsfeed/addPost",SellerAuth,NewsfeedController.addPost);
 
 //put requests
 router.put("/:id",SellerAuth,SellerController.updateUser)

@@ -1,6 +1,6 @@
 const mongoose = require("mongoose");
-const jwt = require('jsonwebtoken');
-const Hasher = require("../helpers/hasher.helper")
+const jwt = require("jsonwebtoken");
+const Hasher = require("../helpers/hasher.helper");
 const { JWT_SECRET, JWT_EMAIL_VERIFY_SECRET, JWT_EXPIRY } = process.env;
 
 const schema = new mongoose.Schema(
@@ -27,22 +27,33 @@ const schema = new mongoose.Schema(
       unique: true,
     },
     emailVerified: Boolean,
-    type: {
-      type: String,
-      enum: ["Product", "Service", "Event"],
-    },
     category: {
       type: String,
     },
     location: {
       type: String,
     },
-    listings: [
-      {
-        type: mongoose.Schema.Types.ObjectId,
-        refPath: "type",
-      },
-    ],
+    listings: {
+      products: [
+        {
+          type: mongoose.Schema.Types.ObjectId,
+        },
+      ],
+      services: [
+        {
+          type: mongoose.Schema.Types.ObjectId,
+        },
+      ],
+      events: [
+        {
+          type: mongoose.Schema.Types.ObjectId,
+        },
+      ],
+    },
+    newsfeed: [{
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "Newsfeed",
+    }],
     followers: [
       {
         type: mongoose.Schema.Types.ObjectId,
@@ -63,12 +74,14 @@ const schema = new mongoose.Schema(
         },
       },
     ],
-    offers: [{
+    offers: [
+      {
         offer: {
-            name: String,
-            discount: Number,
-        }
-    }],
+          name: String,
+          discount: Number,
+        },
+      },
+    ],
     accountStatus: {
       blocked: {
         type: Boolean,
@@ -137,11 +150,7 @@ schema.methods.verifyPassword = function (password, currentPass) {
 };
 
 schema.methods.generateToken = (data) => {
-  return jwt.sign(
-    { ...data },
-    JWT_SECRET,
-    { expiresIn: JWT_EXPIRY }
-  );
+  return jwt.sign({ ...data }, JWT_SECRET, { expiresIn: JWT_EXPIRY });
 };
 
 schema.methods.generateVerifyEmailToken = function () {

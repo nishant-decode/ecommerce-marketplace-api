@@ -12,9 +12,7 @@ class ServiceController {
   listService = async (req, res) => {
     Logger.info(`Request received: ${req.method} ${req.url}`);
 
-    const { name, category, price, location, available, info, details, url, variants } = req.body;
-
-    if (!name || !category || !price || !url) {
+    if (!req.body.name || !req.body.category || !req.body.price || !req.body.url) {
       throw new HttpError(400, "All fields Mandatory!");
     }
 
@@ -24,19 +22,13 @@ class ServiceController {
     }
 
     const service = await ServiceService.create({ 
-      name,
       seller: seller._id,
-      category,
-      price,
-      location,
-      available,
-      info,
-      details,
-      url,
-      variants
+      ...req.body
     });
 
     if (service) {
+      seller.listings.services.push(service._id);
+      await seller.save();
       Logger.info(`Service added successfully: ${service}`);
       Response(res)
         .status(201)

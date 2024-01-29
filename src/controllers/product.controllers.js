@@ -12,9 +12,7 @@ class ProductController {
   listProduct = async (req, res) => {
     Logger.info(`Request received: ${req.method} ${req.url}`);
 
-    const { name, category, price, info, details, url, variants } = req.body;
-
-    if (!name || !category || !price || !url) {
+    if (!req.body.name || !req.body.category || !req.body.price || !req.body.url) {
       throw new HttpError(400, "All fields Mandatory!");
     }
 
@@ -24,17 +22,13 @@ class ProductController {
     }
 
     const product = await ProductService.create({ 
-      name,
       seller: seller._id,
-      category,
-      price,
-      info,
-      details,
-      url,
-      variants
+      ...req.body
     });
 
     if (product) {
+      seller.listings.products.push(product._id);
+      await seller.save();
       Logger.info(`Product added successfully: ${product}`);
       Response(res)
         .status(201)

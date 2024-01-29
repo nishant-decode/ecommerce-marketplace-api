@@ -26,7 +26,6 @@ const schema = new mongoose.Schema(
       },
       discount: {
         type: Number,
-        required: true,
       },
     },
     info: {
@@ -84,8 +83,8 @@ const schema = new mongoose.Schema(
           required: true,
         },
         date: {
-          date: Date,
-          required: True,
+          type: Date,
+          required: true,
         },
       },
     ],

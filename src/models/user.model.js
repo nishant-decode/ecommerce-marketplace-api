@@ -31,12 +31,58 @@ const schema = new mongoose.Schema(
       type: String,
       enum: ["Product", "Service", "Event"],
     },
-    cart: [
-      {
-        type: mongoose.Schema.Types.ObjectId,
-        refPath: "listingType",
-      },
-    ],
+    cart: {
+      products: [
+        {
+          productId: {
+            type: mongoose.Schema.Types.ObjectId,
+            required: true,
+          },
+          specifications: [
+            {
+              type: String,
+            },
+          ],
+          quantity: {
+            type: Number,
+            default: 1, 
+          },
+        },
+      ],
+      services: [
+        {
+          serviceId: {
+            type: mongoose.Schema.Types.ObjectId,
+            required: true,
+          },
+          specifications: [
+            {
+              type: String,
+            },
+          ],
+          note: {
+            type: String,
+          },
+        },
+      ],
+      events: [
+        {
+          eventId: {
+            type: mongoose.Schema.Types.ObjectId,
+            required: true,
+          },
+          specifications: [
+            {
+              type: String,
+            },
+          ],
+          quantity: {
+            type: Number,
+            default: 1,
+          },
+        },
+      ],
+    },
     lists: [
       {
         type: mongoose.Schema.Types.ObjectId,
@@ -124,9 +170,9 @@ schema.pre("save", async function (next) {
   next();
 });
 
-schema.methods.verifyPassword = function (candidatePassword) {
+schema.methods.verifyPassword = function (password, currentPass) {
   return new Promise((resolve, reject) => {
-    Hasher.compare(candidatePassword, this.password)
+    Hasher.compare(password, currentPass)
       .then((isMatch) => resolve(isMatch))
       .catch((err) => reject(err));
   });

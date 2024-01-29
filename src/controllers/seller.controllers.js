@@ -16,9 +16,9 @@ class SellerController extends BasicUserController {
   createStore = async (req, res) => {
     Logger.info(`Request received: ${req.method} ${req.url}`);
 
-    const { storeName, type, category, location, offers } = req.body;
+    const { storeName, category, location } = req.body;
 
-    if (!storeName || !type || !category || !location || !offers) {
+    if (!storeName || !category || !location) {
       throw new HttpError(400, "All fields Mandatory!");
     }
 
@@ -28,11 +28,7 @@ class SellerController extends BasicUserController {
     }
 
     const sellerStore = await this.service.findByIdAndUpdate(req.params.id , { 
-      storeName,
-      type,
-      category,
-      location,
-      offers
+      ...req.body
     });
 
     if (sellerStore) {
