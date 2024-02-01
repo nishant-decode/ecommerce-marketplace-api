@@ -2,10 +2,10 @@ const HttpError = require("../helpers/httpError.helpers");
 const Response = require("../helpers/response.helpers");
 const Logger = require("../helpers/logger.helpers");
 
-const { NewsfeedService } = require("../services/newsfeed.service");
+const { PostService } = require("../services/post.service");
 const { SellerService } = require("../services/seller.service");
 
-class NewsfeedController {
+class PostController {
   addPost = async (req, res) => {
     Logger.info(`Request received: ${req.method} ${req.url}`);
 
@@ -22,7 +22,7 @@ class NewsfeedController {
     const { content, url, listing, listingId } = req.body;
 
     // Create a new post
-    const post = await NewsfeedService.create({
+    const post = await PostService.create({
       sellerId,
       content,
       url,
@@ -39,4 +39,4 @@ class NewsfeedController {
   };
 }
 
-module.exports.NewsfeedController = new NewsfeedController();
+module.exports.PostController = new PostController();

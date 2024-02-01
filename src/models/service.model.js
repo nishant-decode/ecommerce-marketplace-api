@@ -15,31 +15,30 @@ const schema = new mongoose.Schema(
       type: String,
       required: true,
     },
-    price: {
-      original: {
-        type: Number,
-        required: true,
-      },
-      discount: {
-        type: Number,
-        required: true,
-      },
+    providerAddress: {
+      type: mongoose.Schema.Types.ObjectId,
+      required: true,
     },
-    location: [
+    locationsAvailable: [
       {
         option: {
-          type: String,
+          type: mongoose.Schema.Types.ObjectId,
           required: true,
         },
         price: {
           type: String,
           required: true,
         },
+        discount: {
+          type: Number,
+          required: true,
+        },
       },
     ],
-    available: [
+    slotsAvailable: [
       {
-        date: Date,
+        startTime: Date,
+        endTime: Date,
       },
     ],
     info: {
@@ -73,25 +72,9 @@ const schema = new mongoose.Schema(
         },
       ],
     },
-    variants: [
-      {
-        name: {
-          type: String,
-        },
-        values: [
-          {
-            type: String,
-          },
-        ],
-        price: {
-          type: Number,
-        }
-      },
-    ],
-    reviews: [
+    additionalServices: [
       {
         type: mongoose.Schema.Types.ObjectId,
-        ref: "Reviews",
       },
     ],
   },

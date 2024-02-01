@@ -21,7 +21,6 @@ router.post("/sendToken",SellerController.sendToken);
 router.post("/verifyToken",SellerController.verifyToken);
 router.post("/resetPassword",SellerAuth,SellerController.resetPassword);
 
-router.post("/:id/products/listProduct",SellerAuth,ProductController.listProduct);
 router.post("/:id/services/listService",SellerAuth,ServiceController.listService);
 router.post("/:id/events/listEvent",SellerAuth,EventController.listEvent);
 

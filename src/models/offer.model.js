@@ -1,19 +1,20 @@
 const mongoose = require("mongoose");
 
-const schema = mongoose.Schema(
+const schema = new mongoose.Schema(
   {
     name: {
       type: String,
       required: true,
     },
-    creatorId: {
-      type: mongoose.Schema.Types.ObjectId,
+    allListingsIncluded: {
+      type: Boolean,
+      default: false,
       required: true,
     },
-    status: {
-      type: String,
-      enum: ["Public", "Private"],
-      default: "Public",
+    comboOffer: {
+      type: Boolean,
+      default: false,
+      required: true,
     },
     listings: [
       {
@@ -27,21 +28,19 @@ const schema = mongoose.Schema(
         },
       },
     ],
-    description: {
-      type: String,
+    minAmountCondition: {
+      type: Number,
+    },
+    discount: {
+      type: Number,
       required: true,
     },
-    keywords: [
-      {
-        type: String,
-      },
-    ],
   },
   {
     timestamps: true,
   }
 );
 
-const List = mongoose.model("List", schema);
+const Offer = mongoose.model("Offer", schema);
 
-module.exports.List = List;
+module.exports.Offer = Offer;

@@ -7,6 +7,15 @@ const schema = new mongoose.Schema(
       ref: "User",
       required: true,
     },
+    category: {
+      type: String,
+      enum: ["Comment", "Review", "Post", "Product", "Service", "Event"],
+      required: true,
+    },
+    categoryId: {
+      type: mongoose.Schema.Types.ObjectId,
+      required: true,
+    },
     content: {
       type: String,
       required: true,
@@ -16,24 +25,7 @@ const schema = new mongoose.Schema(
         type: mongoose.Schema.Types.ObjectId,
         ref: "User",
       },
-    ],
-    replies: [
-      {
-        type: mongoose.Schema.Types.ObjectId,
-        ref: "Comment",
-      },
-    ],
-    reports: [
-      {
-        user: {
-          type: mongoose.Schema.Types.ObjectId,
-          ref: "User",
-        },
-        reason: {
-          type: String,
-        },
-      },
-    ],
+    ]
   },
   {
     timestamps: true,

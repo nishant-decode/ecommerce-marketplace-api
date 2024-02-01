@@ -2,24 +2,27 @@ const mongoose = require("mongoose");
 
 const schema = new mongoose.Schema(
   {
-    userId: {
+    sellerId: {
       type: mongoose.Schema.Types.ObjectId,
-      ref: "User",
-    },
-    views: {
-      type: Number,
       required: true,
-      default: 0,
+      ref: "Seller",
     },
-    title: {
+    content: {
       type: String,
       required: true,
     },
-    description: {
+    url: {
       type: String,
-      required: true,
     },
-    reviewedlistings: [
+    likes: [
+      {
+        type: mongoose.Schema.Types.ObjectId,
+        ref: "User",
+        default: [],
+      },
+    ],
+    //mentioned listings in the post for newsfeed
+    listings: [
       {
         listingType: {
           type: String,
@@ -31,23 +34,12 @@ const schema = new mongoose.Schema(
         },
       },
     ],
-    videoUrl: {
-      type: String,
-      default: undefined,
-    },
-    likes: [
-      {
-        type: mongoose.Schema.Types.ObjectId,
-        ref: "User",
-        default: [],
-      },
-    ]
   },
   {
     timestamps: true,
   }
 );
 
-const Review = mongoose.model("Review", schema);
+const Post = mongoose.model("Post", schema);
 
-module.exports.Review = Review;
+module.exportsPost = Post;

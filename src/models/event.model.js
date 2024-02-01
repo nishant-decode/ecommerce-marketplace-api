@@ -15,8 +15,8 @@ const schema = new mongoose.Schema(
       type: String,
       required: true,
     },
-    location: {
-      type: String,
+    address: {
+      type: mongoose.Schema.Types.ObjectId,
       required: true,
     },
     price: {
@@ -59,39 +59,10 @@ const schema = new mongoose.Schema(
         },
       ],
     },
-    available: [
+    slotsAvailable: [
       {
-        date: Date,
-      },
-    ],
-    tickets: [
-      {
-        name: {
-          type: String,
-          required: true,
-        },
-        zone: {
-          type: String,
-          required: true,
-        },
-        price: {
-          type: Number,
-          required: true,
-        },
-        quantity: {
-          type: Number,
-          required: true,
-        },
-        date: {
-          type: Date,
-          required: true,
-        },
-      },
-    ],
-    reviews: [
-      {
-        type: mongoose.Schema.Types.ObjectId,
-        ref: "Reviews",
+        startTime: Date,
+        endTime: Date,
       },
     ],
   },

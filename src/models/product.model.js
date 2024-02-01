@@ -15,6 +15,10 @@ const schema = new mongoose.Schema(
       type: String,
       required: true,
     },
+    department: {
+      type: String,
+      required: true,
+    },
     price: {
       original: {
         type: Number,
@@ -25,6 +29,9 @@ const schema = new mongoose.Schema(
         required: true,
       },
     },
+    variantAttributes: [{ 
+      type: String,
+    }],
     info: {
       highlights: {
         type: String,
@@ -55,31 +62,7 @@ const schema = new mongoose.Schema(
           type: String,
         },
       ],
-    },
-    variants: [
-      {
-        name: {
-          type: String,
-        },
-        values: [
-          {
-            type: String,
-          },
-        ],
-        price: {
-          type: Number,
-        },
-        quantity: {
-          type: Number,
-        },
-      },
-    ],
-    reviews: [
-      {
-        type: mongoose.Schema.Types.ObjectId,
-        ref: "Reviews",
-      },
-    ],
+    }
   },
   {
     timestamps: true,

@@ -23,8 +23,9 @@ const schema = new mongoose.Schema(
       type: String,
       default: "Order Placed",
     },
-    address: {
-      type: String,
+    addressId: {
+      type: mongoose.Schema.Types.ObjectId,
+      required: true,
     },
     totalAmount: {
       type: Number,

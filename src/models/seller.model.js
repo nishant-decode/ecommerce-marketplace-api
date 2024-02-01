@@ -27,61 +27,9 @@ const schema = new mongoose.Schema(
       unique: true,
     },
     emailVerified: Boolean,
-    category: {
-      type: String,
-    },
     location: {
       type: String,
     },
-    listings: {
-      products: [
-        {
-          type: mongoose.Schema.Types.ObjectId,
-        },
-      ],
-      services: [
-        {
-          type: mongoose.Schema.Types.ObjectId,
-        },
-      ],
-      events: [
-        {
-          type: mongoose.Schema.Types.ObjectId,
-        },
-      ],
-    },
-    newsfeed: [{
-      type: mongoose.Schema.Types.ObjectId,
-      ref: "Newsfeed",
-    }],
-    followers: [
-      {
-        type: mongoose.Schema.Types.ObjectId,
-        ref: "User",
-      },
-    ],
-    notify: [
-      {
-        notification: {
-          user: {
-            type: mongoose.Schema.Types.ObjectId,
-            ref: "User",
-          },
-          product: {
-            type: mongoose.Schema.Types.ObjectId,
-            ref: "Product",
-          },
-        },
-      },
-    ],
-    offers: [
-      {
-        offer: {
-          name: String,
-          discount: Number,
-        },
-      },
-    ],
     accountStatus: {
       blocked: {
         type: Boolean,
