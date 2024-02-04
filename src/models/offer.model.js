@@ -6,6 +6,10 @@ const schema = new mongoose.Schema(
       type: String,
       required: true,
     },
+    storeId: {
+      type: mongoose.Schema.Types.ObjectId,
+      required: true,
+    },
     allListingsIncluded: {
       type: Boolean,
       default: false,

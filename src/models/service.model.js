@@ -6,9 +6,8 @@ const schema = new mongoose.Schema(
       type: String,
       required: true,
     },
-    seller: {
+    storeId: {
       type: mongoose.Schema.Types.ObjectId,
-      ref: "Seller",
       required: true,
     },
     category: {
@@ -19,10 +18,20 @@ const schema = new mongoose.Schema(
       type: mongoose.Schema.Types.ObjectId,
       required: true,
     },
+    price: {
+      original: {
+        type: Number,
+        required: true,
+      },
+      discount: {
+        type: Number,
+        required: true,
+      }
+    },
     locationsAvailable: [
       {
         option: {
-          type: mongoose.Schema.Types.ObjectId,
+          type: String,
           required: true,
         },
         price: {

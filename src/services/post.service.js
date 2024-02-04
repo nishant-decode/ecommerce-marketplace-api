@@ -3,7 +3,7 @@ const BasicServices = require("./basic.service");
 
 class PostService extends BasicServices {
   constructor() {
-    super(Newsfeed);
+    super(Post);
   }
 }
 

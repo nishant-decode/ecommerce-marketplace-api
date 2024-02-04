@@ -2,10 +2,9 @@ const mongoose = require("mongoose");
 
 const schema = new mongoose.Schema(
   {
-    sellerId: {
+    storeId: {
       type: mongoose.Schema.Types.ObjectId,
       required: true,
-      ref: "Seller",
     },
     content: {
       type: String,
@@ -26,6 +25,7 @@ const schema = new mongoose.Schema(
       {
         listingType: {
           type: String,
+          enum: ['product','service','event'],
           required: true,
         },
         listingId: {
@@ -42,4 +42,4 @@ const schema = new mongoose.Schema(
 
 const Post = mongoose.model("Post", schema);
 
-module.exportsPost = Post;
+module.exports.Post = Post;

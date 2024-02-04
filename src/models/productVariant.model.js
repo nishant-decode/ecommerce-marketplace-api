@@ -6,6 +6,10 @@ const schema = new mongoose.Schema(
       type: mongoose.Schema.Types.ObjectId,
       required: true,
     },
+    storeId: {
+      type: mongoose.Schema.Types.ObjectId,
+      required: true,
+    },
     variant: [
       {
         attribute: {
@@ -19,7 +23,7 @@ const schema = new mongoose.Schema(
       },
     ],
     price: {
-      type: String,
+      type: Number,
       required: true,
     },
     quantity: {

@@ -6,9 +6,8 @@ const schema = new mongoose.Schema(
       type: String,
       required: true,
     },
-    seller: {
+    storeId: {
       type: mongoose.Schema.Types.ObjectId,
-      ref: "Seller",
       required: true,
     },
     category: {

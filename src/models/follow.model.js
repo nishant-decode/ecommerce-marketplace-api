@@ -2,7 +2,7 @@ const mongoose = require("mongoose");
 
 const schema = new mongoose.Schema(
   {
-    sellerId: {
+    storeId: {
         type: mongoose.Schema.Types.ObjectId,
         required: true,
     },
@@ -16,6 +16,6 @@ const schema = new mongoose.Schema(
   }
 );
 
-const Follower = mongoose.model("Follower", schema);
+const Follow = mongoose.model("Follow", schema);
 
-module.exports.Follower = Follower;
+module.exports.Follow = Follow;

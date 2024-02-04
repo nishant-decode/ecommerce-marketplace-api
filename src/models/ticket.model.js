@@ -6,13 +6,17 @@ const schema = new mongoose.Schema(
       type: mongoose.Schema.Types.ObjectId,
       required: true,
     },
+    storeId: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "Seller",
+      required: true,
+    },
     name: {
       type: String,
       required: true,
     },
     zone: {
       type: String,
-      required: true,
     },
     price: {
       type: Number,
@@ -25,7 +29,6 @@ const schema = new mongoose.Schema(
     eventTimings: {
       startTime: Date,
       endTime: Date,
-      required: true,
     },
   },
   {

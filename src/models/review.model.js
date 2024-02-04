@@ -8,7 +8,6 @@ const schema = new mongoose.Schema(
     },
     views: {
       type: Number,
-      required: true,
       default: 0,
     },
     title: {
@@ -41,7 +40,12 @@ const schema = new mongoose.Schema(
         ref: "User",
         default: [],
       },
-    ]
+    ],
+    rating: {
+      type: Number,
+      enum: [1,2,3,4,5],
+      required: true,
+    }
   },
   {
     timestamps: true,

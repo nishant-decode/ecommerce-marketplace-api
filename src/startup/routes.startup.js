@@ -11,7 +11,20 @@ const Logger = require("../helpers/logger.helpers");
 
 //Routers
 const { UserRouter } = require("../routes/user.routes");
-const { SellerRouter } = require("../routes/seller.routes");
+const { StoreRouter } = require("../routes/store.routes");
+const { ProductRouter } = require("../routes/product.routes");
+const { ProductVariantRouter } = require("../routes/productVariant.routes");
+const { ServiceRouter } = require("../routes/service.routes");
+const { EventRouter } = require("../routes/event.routes");
+const { TicketRouter } = require("../routes/ticket.routes");
+const { ReviewRouter } = require("../routes/review.routes");
+const { ReportRouter } = require("../routes/report.routes");
+const { PostRouter } = require("../routes/post.routes");
+const { OrderRouter } = require("../routes/order.routes");
+const { OfferRouter } = require("../routes/offer.routes");
+const { CommentRouter } = require("../routes/comment.routes");
+const { AddressRouter } = require("../routes/address.routes");
+
 
 module.exports = (app) => {
   app.use(express.json({ limit: "9999000009mb" })); // body parser, parses request body
@@ -23,7 +36,20 @@ module.exports = (app) => {
 
   //start of routes
   app.use("/api/user", UserRouter);
-  app.use("/api/seller", SellerRouter);
+  app.use("/api/store", StoreRouter);
+  app.use("/api/product", ProductRouter);
+  app.use("/api/productVariant", ProductVariantRouter);
+  app.use("/api/service", ServiceRouter);
+  app.use("/api/event", EventRouter);
+  app.use("/api/ticket", TicketRouter);
+  app.use("/api/review", ReviewRouter);
+  app.use("/api/report", ReportRouter);
+  app.use("/api/post", PostRouter);
+  app.use("/api/order", OrderRouter);
+  app.use("/api/offer", OfferRouter);
+  app.use("/api/comment", CommentRouter);
+  app.use("/api/address", AddressRouter);
+
 
   //handling async errors in apis
   app.use(ErrorHandler);

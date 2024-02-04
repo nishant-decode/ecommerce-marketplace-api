@@ -22,7 +22,7 @@ const Auth = async (req, res, next) => {
 
     req.user = user;
 
-    Logger.info(`Admin authenticated: ${user}`);
+    Logger.info(`User authenticated: ${user}`);
     next();
 };
 

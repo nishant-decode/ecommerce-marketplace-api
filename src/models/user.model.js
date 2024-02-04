@@ -23,6 +23,11 @@ const schema = new mongoose.Schema(
       required: true,
       unique: true,
     },
+    role: {
+      type: String,
+      enum: [ "Buyer", "Seller", "Admin"],
+      default: "Buyer",
+    },
     emailVerified: Boolean,
     accountStatus: {
       blocked: {

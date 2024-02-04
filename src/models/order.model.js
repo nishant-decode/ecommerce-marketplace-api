@@ -12,7 +12,7 @@ const schema = new mongoose.Schema(
       required: true,
       enum: ["Product", "Service", "Event"],
     },
-    listingId: [
+    listings: [
       {
         type: mongoose.Schema.Types.ObjectId,
         refPath: "orderType",
