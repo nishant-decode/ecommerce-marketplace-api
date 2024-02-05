@@ -3,6 +3,7 @@ const { CommentService } = require("../services/comment.service");
 const HttpError = require("../helpers/httpError.helpers");
 const Response = require("../helpers/response.helpers");
 const Logger = require("../helpers/logger.helpers");
+const { sendNotification } = require("../helpers/notification.helper");
 
 class CommentController {
   //@desc get comments by category
@@ -10,7 +11,7 @@ class CommentController {
   //@access public
   getComments = async (req, res) => {
     Logger.info(`Request received: ${req.method} ${req.url}`);
-  
+
     const { category, categoryId } = req.params;
 
     // Retrieve comments by category logic
@@ -29,7 +30,7 @@ class CommentController {
   //@access private
   likeComment = async (req, res) => {
     Logger.info(`Request received: ${req.method} ${req.url}`);
-  
+
     const { commentId } = req.params;
 
     // Like a comment logic
@@ -49,11 +50,7 @@ class CommentController {
     await comment.save();
 
     Logger.info(`Comment liked:`);
-    Response(res)
-      .status(200)
-      .message("Comment liked")
-      .body()
-      .send();
+    Response(res).status(200).message("Comment liked").body().send();
   };
 
   //@desc add a comment
@@ -70,12 +67,14 @@ class CommentController {
       userId: req.user._id,
       content,
       category,
-      categoryId
+      categoryId,
     });
+
+    sendNotification();
 
     Logger.info("Comment added successfully");
     Response(res).status(201).body({ comment }).send();
-  }
+  };
 
   //@desc update comment by commentId
   //@route PUT /:commentId
@@ -106,7 +105,7 @@ class CommentController {
   //@access private
   unlikeComment = async (req, res) => {
     Logger.info(`Request received: ${req.method} ${req.url}`);
-  
+
     const { commentId } = req.params;
 
     // Unlike a comment logic
@@ -122,15 +121,13 @@ class CommentController {
     }
 
     // Remove user from the likes array
-    comment.likes = comment.likes.filter((userId) => userId.toString() !== req.user._id.toString());
+    comment.likes = comment.likes.filter(
+      (userId) => userId.toString() !== req.user._id.toString()
+    );
     await comment.save();
 
     Logger.info(`Comment unliked:`);
-    Response(res)
-      .status(200)
-      .message("Comment unliked")
-      .body()
-      .send();
+    Response(res).status(200).message("Comment unliked").body().send();
   };
 
   //@desc delete comment by commentId
@@ -145,11 +142,7 @@ class CommentController {
     await CommentService.findByIdAndDelete(commentId);
 
     Logger.info(`Comment deleted:`);
-    Response(res)
-      .status(200)
-      .message("Comment deleted")
-      .body()
-      .send();
+    Response(res).status(200).message("Comment deleted").body().send();
   };
 }
 
