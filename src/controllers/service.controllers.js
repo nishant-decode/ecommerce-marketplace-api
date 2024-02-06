@@ -13,14 +13,12 @@ class ServiceController {
   getAllServices = async (req, res) => {
     Logger.info(`Request received: ${req.method} ${req.url}`);
 
-    //logic
+    const filters = req.query; // Optional filters from query params
 
-    Logger.info(`All services:`);
-    Response(res)
-      .status(200)
-      .message("All services")
-      .body()
-      .send();
+    const services = await ServiceService.find(filters);
+
+    Logger.info(`All services: ${services}`);
+    Response(res).status(200).message("All services").body(services).send();
   };
 
   //@desc get a service by serviceId
@@ -29,13 +27,19 @@ class ServiceController {
   getService = async (req, res) => {
     Logger.info(`Request received: ${req.method} ${req.url}`);
 
-    //logic
+    const { serviceId } = req.params;
 
-    Logger.info(`service by serviceId:`);
+    const service = await ServiceService.findById(serviceId);
+
+    if (!service) {
+      throw new HttpError(404, "Service not found");
+    }
+
+    Logger.info(`Service by serviceId: ${service}`);
     Response(res)
       .status(200)
-      .message("service by serviceId")
-      .body()
+      .message("Service by serviceId")
+      .body(service)
       .send();
   };
 
@@ -45,13 +49,15 @@ class ServiceController {
   searchServices = async (req, res) => {
     Logger.info(`Request received: ${req.method} ${req.url}`);
 
-    //logic
+    const filters = req.query; // Search query parameters
 
-    Logger.info(`services found by search query:`);
+    const services = await ServiceService.search(filters);
+
+    Logger.info(`Services found by search query: ${services}`);
     Response(res)
       .status(200)
-      .message("services found by search query")
-      .body()
+      .message("Services found by search query")
+      .body(services)
       .send();
   };
 
@@ -61,7 +67,12 @@ class ServiceController {
   listService = async (req, res) => {
     Logger.info(`Request received: ${req.method} ${req.url}`);
 
-    if (!req.body.name || !req.body.category || !req.body.providerAddress || !req.body.url) {
+    if (
+      !req.body.name ||
+      !req.body.category ||
+      !req.body.providerAddress ||
+      !req.body.url
+    ) {
       throw new HttpError(400, "All fields Mandatory!");
     }
 
@@ -75,9 +86,9 @@ class ServiceController {
       throw new HttpError(400, "Store address does not exist!");
     }
 
-    const service = await ServiceService.create({ 
+    const service = await ServiceService.create({
       storeId: req.params.storeId,
-      ...req.body
+      ...req.body,
     });
 
     if (service) {
@@ -98,13 +109,24 @@ class ServiceController {
   updateService = async (req, res) => {
     Logger.info(`Request received: ${req.method} ${req.url}`);
 
-    //logic
+    const { serviceId } = req.params;
+    const updateData = req.body;
 
-    Logger.info(`service updated by serviceId:`);
+    const updatedService = await ServiceService.findByIdAndUpdate(
+      serviceId,
+      updateData,
+      { new: true } // Return the updated document
+    );
+
+    if (!updatedService) {
+      throw new HttpError(404, "Service not found");
+    }
+
+    Logger.info(`Service updated by serviceId: ${updatedService}`);
     Response(res)
       .status(200)
-      .message("service updated by serviceId")
-      .body()
+      .message("Service updated by serviceId")
+      .body(updatedService)
       .send();
   };
 
@@ -114,14 +136,16 @@ class ServiceController {
   deleteService = async (req, res) => {
     Logger.info(`Request received: ${req.method} ${req.url}`);
 
-    //logic
+    const { serviceId } = req.params;
 
-    Logger.info(`service deleted by serviceId:`);
-    Response(res)
-      .status(200)
-      .message("service deleted by serviceId")
-      .body()
-      .send();
+    const deletedService = await ServiceService.findByIdAndDelete(serviceId);
+
+    if (!deletedService) {
+      throw new HttpError(404, "Service not found");
+    }
+
+    Logger.info(`Service deleted by serviceId: ${deletedService}`);
+    Response(res).status(200).message("Service deleted by serviceId").send();
   };
 }
 

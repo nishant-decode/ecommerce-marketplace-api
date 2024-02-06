@@ -13,13 +13,15 @@ class ProductVariantController {
   getAllVariants = async (req, res) => {
     Logger.info(`Request received: ${req.method} ${req.url}`);
 
-    //logic
+    const filters = req.query; // Optional filters from query params
 
-    Logger.info(`All variants of all products:`);
+    const variants = await ProductVariantService.find(filters);
+
+    Logger.info(`All variants of all products: ${variants}`);
     Response(res)
       .status(200)
       .message("All variants of all products")
-      .body()
+      .body(variants)
       .send();
   };
 
@@ -29,10 +31,20 @@ class ProductVariantController {
   getVariant = async (req, res) => {
     Logger.info(`Request received: ${req.method} ${req.url}`);
 
-    //logic
+    const { variantId } = req.params;
 
-    Logger.info(`Product Variant:`);
-    Response(res).status(200).message("Product Variant").body().send();
+    const variant = await ProductVariantService.findById(variantId);
+
+    if (!variant) {
+      throw new HttpError(404, "Variant not found");
+    }
+
+    Logger.info(`Product Variant by variantId: ${variant}`);
+    Response(res)
+      .status(200)
+      .message("Product Variant by variantId")
+      .body(variant)
+      .send();
   };
 
   //@desc get all variants of a product
@@ -41,10 +53,23 @@ class ProductVariantController {
   getProductVariants = async (req, res) => {
     Logger.info(`Request received: ${req.method} ${req.url}`);
 
-    //logic
+    const { productId } = req.params;
 
-    Logger.info(`Product Variants:`);
-    Response(res).status(200).message("Product Variants").body().send();
+    const product = await ProductService.findById(productId);
+
+    if (!product) {
+      throw new HttpError(404, "Product not found");
+    }
+
+    const filters = { productId }; // Filter by product ID
+    const variants = await ProductVariantService.find(filters);
+
+    Logger.info(`Product Variants by productId: ${variants}`);
+    Response(res)
+      .status(200)
+      .message("Product Variants by productId")
+      .body(variants)
+      .send();
   };
 
   //@desc search attributes of a variant
@@ -53,13 +78,15 @@ class ProductVariantController {
   searchAttributes = async (req, res) => {
     Logger.info(`Request received: ${req.method} ${req.url}`);
 
-    //logic
+    const filters = req.query; // Search query parameters
 
-    Logger.info(`Product Variant attributes:`);
+    const variants = await ProductVariantService.searchAttributes(filters); //implement
+
+    Logger.info(`Product Variant attributes by search query: ${variants}`);
     Response(res)
       .status(200)
-      .message("Product Variant attributes")
-      .body()
+      .message("Product Variant attributes by search query")
+      .body(variants)
       .send();
   };
 
@@ -80,28 +107,19 @@ class ProductVariantController {
       !quantity ||
       !price
     ) {
-      throw new HttpError(
-        400,
-        "Invalid request body"
-      );
+      throw new HttpError(400, "Invalid request body");
     }
 
     const product = await ProductService.findById(productId);
 
     if (!product) {
-      throw new HttpError(
-        404,
-        "Product not found"
-      );
+      throw new HttpError(404, "Product not found");
     }
 
     const store = await StoreService.findById(storeId);
 
     if (!store) {
-      throw new HttpError(
-        404,
-        "Store not found"
-      );
+      throw new HttpError(404, "Store not found");
     }
 
     for (const variantItem of variant) {
@@ -121,16 +139,23 @@ class ProductVariantController {
       variant,
       price,
     });
-    
+
     if (existingVariant) {
-      throw new HttpError(400, "Variant with the same attributes, values, and price already exists");
+      throw new HttpError(
+        400,
+        "Variant with the same attributes, values, and price already exists"
+      );
     } else {
       const Variant = await ProductVariantService.create({
         productId,
-        ...req.body
+        ...req.body,
       });
       Logger.info(`Product Variants added`);
-      Response(res).status(201).message("Product Variants added").body({Variant}).send();
+      Response(res)
+        .status(201)
+        .message("Product Variants added")
+        .body({ Variant })
+        .send();
     }
   };
 
@@ -140,10 +165,25 @@ class ProductVariantController {
   updateVariant = async (req, res) => {
     Logger.info(`Request received: ${req.method} ${req.url}`);
 
-    //logic
+    const { variantId } = req.params;
+    const updateData = req.body;
 
-    Logger.info(`Product Variant updated:`);
-    Response(res).status(200).message("Product Variant updated").body().send();
+    const updatedVariant = await ProductVariantService.findByIdAndUpdate(
+      variantId,
+      updateData,
+      { new: true } // Return the updated document
+    );
+
+    if (!updatedVariant) {
+      throw new HttpError(404, "Variant not found");
+    }
+
+    Logger.info(`Product Variant updated by variantId: ${updatedVariant}`);
+    Response(res)
+      .status(200)
+      .message("Product Variant updated by variantId")
+      .body(updatedVariant)
+      .send();
   };
 
   //@desc delete a variant by variantId
@@ -152,10 +192,21 @@ class ProductVariantController {
   deleteVariant = async (req, res) => {
     Logger.info(`Request received: ${req.method} ${req.url}`);
 
-    //logic
+    const { variantId } = req.params;
 
-    Logger.info(`Product Variant deleted:`);
-    Response(res).status(200).message("Product Variant deleted").body().send();
+    const deletedVariant = await ProductVariantService.findByIdAndDelete(
+      variantId
+    );
+
+    if (!deletedVariant) {
+      throw new HttpError(404, "Variant not found");
+    }
+
+    Logger.info(`Product Variant deleted by variantId: ${deletedVariant}`);
+    Response(res)
+      .status(200)
+      .message("Product Variant deleted by variantId")
+      .send();
   };
 }
 

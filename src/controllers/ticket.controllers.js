@@ -12,14 +12,16 @@ class TicketController {
   getTicket = async (req, res) => {
     Logger.info(`Request received: ${req.method} ${req.url}`);
 
-    //logic
+    const { ticketId } = req.params;
 
-    Logger.info(`Ticket by ticketId:`);
-    Response(res)
-      .status(200)
-      .message("Ticket by ticketId")
-      .body()
-      .send();
+    const ticket = await TicketService.findById(ticketId);
+
+    if (!ticket) {
+      throw new HttpError(404, "Ticket not found");
+    }
+
+    Logger.info(`Ticket by ticketId: ${ticket}`);
+    Response(res).status(200).message("Ticket by ticketId").body(ticket).send();
   };
 
   //@desc get all Tickets by eventId
@@ -28,13 +30,15 @@ class TicketController {
   getAllEventTickets = async (req, res) => {
     Logger.info(`Request received: ${req.method} ${req.url}`);
 
-    //logic
+    const { eventId } = req.params;
 
-    Logger.info(`Tickets by eventId:`);
+    const tickets = await TicketService.find({ eventId });
+
+    Logger.info(`Tickets by eventId: ${tickets}`);
     Response(res)
       .status(200)
       .message("Tickets by eventId")
-      .body()
+      .body(tickets)
       .send();
   };
 
@@ -58,16 +62,19 @@ class TicketController {
       throw new HttpError(404, "Event not found");
     }
 
-    const matchingSlots = event.slotsAvailable.filter(
-      (slot) => {
-        const slotStartTimeString = new Date(slot.startTime).toISOString();
-        const slotEndTimeString = new Date(slot.endTime).toISOString();
-        const eventStartTimeString = new Date(eventTimings.startTime).toISOString();
-        const eventEndTimeString = new Date(eventTimings.endTime).toISOString();
-    
-        return eventStartTimeString >= slotStartTimeString && eventEndTimeString <= slotEndTimeString;
-      }
-    );
+    const matchingSlots = event.slotsAvailable.filter((slot) => {
+      const slotStartTimeString = new Date(slot.startTime).toISOString();
+      const slotEndTimeString = new Date(slot.endTime).toISOString();
+      const eventStartTimeString = new Date(
+        eventTimings.startTime
+      ).toISOString();
+      const eventEndTimeString = new Date(eventTimings.endTime).toISOString();
+
+      return (
+        eventStartTimeString >= slotStartTimeString &&
+        eventEndTimeString <= slotEndTimeString
+      );
+    });
 
     if (!matchingSlots.length) {
       throw new HttpError(400, "Invalid event timings");
@@ -98,13 +105,24 @@ class TicketController {
   updateTicket = async (req, res) => {
     Logger.info(`Request received: ${req.method} ${req.url}`);
 
-    //logic
+    const { ticketId } = req.params;
+    const updateData = req.body;
 
-    Logger.info(`Ticket updated by ticketId:`);
+    const updatedTicket = await TicketService.findByIdAndUpdate(
+      ticketId,
+      updateData,
+      { new: true }
+    );
+
+    if (!updatedTicket) {
+      throw new HttpError(404, "Ticket not found");
+    }
+
+    Logger.info(`Ticket updated by ticketId: ${updatedTicket}`);
     Response(res)
       .status(200)
       .message("Ticket updated by ticketId")
-      .body()
+      .body(updatedTicket)
       .send();
   };
 
@@ -114,14 +132,16 @@ class TicketController {
   deleteTicket = async (req, res) => {
     Logger.info(`Request received: ${req.method} ${req.url}`);
 
-    //logic
+    const { ticketId } = req.params;
 
-    Logger.info(`Ticket deleted by ticketId:`);
-    Response(res)
-      .status(200)
-      .message("Ticket deleted by ticketId")
-      .body()
-      .send();
+    const deletedTicket = await TicketService.findByIdAndDelete(ticketId);
+
+    if (!deletedTicket) {
+      throw new HttpError(404, "Ticket not found");
+    }
+
+    Logger.info(`Ticket deleted by ticketId: ${deletedTicket}`);
+    Response(res).status(200).message("Ticket deleted by ticketId").send();
   };
 }
 

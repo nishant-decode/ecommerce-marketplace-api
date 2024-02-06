@@ -12,15 +12,13 @@ class EventController {
   //@access public
   getAllEvents = async (req, res) => {
     Logger.info(`Request received: ${req.method} ${req.url}`);
-  
-    //logic
-  
-    Logger.info(`All events:`);
-    Response(res)
-      .status(200)
-      .message("All events")
-      .body()
-      .send();
+
+    const filters = req.query; // Optional filters from query params
+
+    const events = await EventService.find(filters);
+
+    Logger.info(`All events: ${events}`);
+    Response(res).status(200).message("All events").body(events).send();
   };
 
   //@desc get event by eventId
@@ -29,14 +27,18 @@ class EventController {
   getEvent = async (req, res) => {
     Logger.info(`Request received: ${req.method} ${req.url}`);
 
-    //logic
+    const { eventId } = req.params;
 
-    Logger.info(`Event:`);
-    Response(res)
-      .status(200)
-      .message("Event")
-      .body()
-      .send();
+    const event = await EventService.findById(eventId)
+      .populate("storeId") // Populate the store details
+      .populate("address"); // Populate the address details
+
+    if (!event) {
+      throw new HttpError(404, "Event not found");
+    }
+
+    Logger.info(`Event: ${event}`);
+    Response(res).status(200).message("Event").body(event).send();
   };
 
   //@desc search events by search query
@@ -45,13 +47,15 @@ class EventController {
   searchEvents = async (req, res) => {
     Logger.info(`Request received: ${req.method} ${req.url}`);
 
-    //logic
+    const filters = req.query; // Search query parameters
 
-    Logger.info(`Events found by search query:`);
+    const events = await EventService.search(filters);
+
+    Logger.info(`Events found by search query: ${events}`);
     Response(res)
       .status(200)
       .message("Events found by search query")
-      .body()
+      .body(events)
       .send();
   };
 
@@ -61,7 +65,14 @@ class EventController {
   listEvent = async (req, res) => {
     Logger.info(`Request received: ${req.method} ${req.url}`);
 
-    if (!req.body.name || !req.body.category || !req.body.price || !req.body.url || !req.body.address || !req.body.slotsAvailable) {
+    if (
+      !req.body.name ||
+      !req.body.category ||
+      !req.body.price ||
+      !req.body.url ||
+      !req.body.address ||
+      !req.body.slotsAvailable
+    ) {
       throw new HttpError(400, "All fields Mandatory!");
     }
 
@@ -75,9 +86,9 @@ class EventController {
       throw new HttpError(400, "Store address does not exist!");
     }
 
-    const event = await EventService.create({ 
+    const event = await EventService.create({
       storeId: store._id,
-      ...req.body
+      ...req.body,
     });
 
     if (event) {
@@ -98,12 +109,24 @@ class EventController {
   updateEvent = async (req, res) => {
     Logger.info(`Request received: ${req.method} ${req.url}`);
 
-    //loffer
-    Logger.info(`Event updated:`);
+    const { eventId } = req.params;
+    const updateData = req.body;
+
+    const updatedEvent = await EventService.findByIdAndUpdate(
+      eventId,
+      updateData,
+      { new: true } // Return the updated document
+    );
+
+    if (!updatedEvent) {
+      throw new HttpError(404, "Event not found");
+    }
+
+    Logger.info(`Event updated: ${updatedEvent}`);
     Response(res)
       .status(200)
-      .message("Event updated")
-      .body()
+      .message("Event updated successfully")
+      .body(updatedEvent)
       .send();
   };
 
@@ -113,14 +136,16 @@ class EventController {
   deleteEvent = async (req, res) => {
     Logger.info(`Request received: ${req.method} ${req.url}`);
 
-    //logic
+    const { eventId } = req.params;
 
-    Logger.info(`Event deleted:`);
-    Response(res)
-      .status(200)
-      .message("Event deleted")
-      .body()
-      .send();
+    const deletedEvent = await EventService.findByIdAndDelete(eventId);
+
+    if (!deletedEvent) {
+      throw new HttpError(404, "Event not found");
+    }
+
+    Logger.info(`Event deleted: ${deletedEvent}`);
+    Response(res).status(200).message("Event deleted successfully").send();
   };
 }
 

@@ -12,14 +12,16 @@ class StoreController {
   getStore = async (req, res) => {
     Logger.info(`Request received: ${req.method} ${req.url}`);
 
-    //logic
+    const { storeId } = req.params;
 
-    Logger.info(`store by storeId:`);
-    Response(res)
-      .status(200)
-      .message("store by storeId")
-      .body()
-      .send();
+    const store = await StoreService.findById(storeId);
+
+    if (!store) {
+      throw new HttpError(404, "Store not found");
+    }
+
+    Logger.info(`Store by storeId: ${store}`);
+    Response(res).status(200).message("Store by storeId").body(store).send();
   };
 
   //@desc get all stores
@@ -28,14 +30,12 @@ class StoreController {
   getAllStores = async (req, res) => {
     Logger.info(`Request received: ${req.method} ${req.url}`);
 
-    //logic
+    const filters = req.query; // Optional filters from query params
 
-    Logger.info(`all stores`);
-    Response(res)
-      .status(200)
-      .message("all stores")
-      .body()
-      .send();
+    const stores = await StoreService.find(filters);
+
+    Logger.info(`All stores: ${stores}`);
+    Response(res).status(200).message("All Stores").body(stores).send();
   };
 
   //@desc create a store
@@ -46,7 +46,7 @@ class StoreController {
 
     const { storeName, description } = req.body;
 
-    const sellerId = req.params.sellerId
+    const sellerId = req.params.sellerId;
 
     if (!storeName || !description) {
       throw new HttpError(400, "All fields Mandatory!");
@@ -57,9 +57,9 @@ class StoreController {
       throw new HttpError(400, "User does not exist!");
     }
 
-    const sellerStore = await StoreService.create({ 
+    const sellerStore = await StoreService.create({
       ...req.body,
-      sellerId
+      sellerId,
     });
 
     if (sellerStore) {
@@ -80,13 +80,24 @@ class StoreController {
   updateStore = async (req, res) => {
     Logger.info(`Request received: ${req.method} ${req.url}`);
 
-    //logic
+    const { storeId } = req.params;
+    const updateData = req.body;
 
-    Logger.info(`store updated by storeId:`);
+    const updatedStore = await StoreService.findByIdAndUpdate(
+      storeId,
+      updateData,
+      { new: true } // Return the updated document
+    );
+
+    if (!updatedStore) {
+      throw new HttpError(404, "Store not found");
+    }
+
+    Logger.info(`Store updated by storeId: ${updatedStore}`);
     Response(res)
       .status(200)
-      .message("store updated by storeId")
-      .body()
+      .message("Store updated by storeId")
+      .body(updatedStore)
       .send();
   };
 
@@ -96,14 +107,16 @@ class StoreController {
   deleteStore = async (req, res) => {
     Logger.info(`Request received: ${req.method} ${req.url}`);
 
-    //logic
+    const { storeId } = req.params;
 
-    Logger.info(`store deleted by storeId:`);
-    Response(res)
-      .status(200)
-      .message("store deleted by storeId")
-      .body()
-      .send();
+    const deletedStore = await StoreService.findByIdAndDelete(storeId);
+
+    if (!deletedStore) {
+      throw new HttpError(404, "Store not found");
+    }
+
+    Logger.info(`Store deleted by storeId: ${deletedStore}`);
+    Response(res).status(200).message("Store deleted by storeId").send();
   };
 }
 

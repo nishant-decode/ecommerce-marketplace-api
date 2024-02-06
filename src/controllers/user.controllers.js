@@ -148,14 +148,14 @@ class UserController {
 
     if (
       !user ||
-      !(user.schema.methods.verifyPassword(password, user.password)) ||
+      !user.schema.methods.verifyPassword(password, user.password) ||
       !user.emailVerified
     ) {
       throw new HttpError(401, "User does not exsist!");
     }
 
     user.sessions = {};
-    res.clearCookie('token');
+    res.clearCookie("token");
     await user.save();
 
     const token = user.schema.methods.generateToken(user);
@@ -285,13 +285,10 @@ class UserController {
 
     await UserService.findByIdAndUpdate({ _id: userId }, { sessions: {} });
 
-    res.clearCookie('token');
+    res.clearCookie("token");
 
     Logger.info(`User logged out`);
-    Response(res)
-      .status(200)
-      .message("User logged out!")
-      .send();
+    Response(res).status(200).message("User logged out!").send();
   };
 
   //@desc get all users
@@ -300,14 +297,10 @@ class UserController {
   getAllUsers = async (req, res) => {
     Logger.info(`Request received: ${req.method} ${req.url}`);
 
-    //logic
+    const users = await UserService.find({});
 
-    Logger.info(`All users: ${user}`);
-    Response(res)
-      .status(200)
-      .message("All users!")
-      .body({})
-      .send();
+    Logger.info(`All users: ${users}`);
+    Response(res).status(200).message("All users").body({ users }).send();
   };
 
   //@desc get user by userId
@@ -316,14 +309,15 @@ class UserController {
   getUser = async (req, res) => {
     Logger.info(`Request received: ${req.method} ${req.url}`);
 
-    //logic
-    
+    const userId = req.params.userId;
+    const user = await UserService.findById(userId);
+
+    if (!user) {
+      throw new HttpError(404, "User not found");
+    }
+
     Logger.info(`User: ${user}`);
-    Response(res)
-      .status(200)
-      .message("Users!")
-      .body({})
-      .send();
+    Response(res).status(200).message("User found").body({ user }).send();
   };
 
   //@desc update user by userId
@@ -332,14 +326,17 @@ class UserController {
   updateUser = async (req, res) => {
     Logger.info(`Request received: ${req.method} ${req.url}`);
 
-    //logic
-    
+    const userId = req.params.userId;
+    const updates = req.body;
+
+    const user = await UserService.findByIdAndUpdate(userId, { ...updates });
+
+    if (!user) {
+      throw new HttpError(404, "User not found");
+    }
+
     Logger.info(`User Updated: ${user}`);
-    Response(res)
-      .status(200)
-      .message("User Updated!")
-      .body({})
-      .send();
+    Response(res).status(200).message("User Updated").body({ user }).send();
   };
 
   //@desc delete user by userId
@@ -348,14 +345,16 @@ class UserController {
   deleteUser = async (req, res) => {
     Logger.info(`Request received: ${req.method} ${req.url}`);
 
-    //logic
-    
+    const userId = req.params.userId;
+
+    const user = await UserService.findByIdAndDelete(userId);
+
+    if (!user) {
+      throw new HttpError(404, "User not found");
+    }
+
     Logger.info(`User Deleted: ${user}`);
-    Response(res)
-      .status(200)
-      .message("User Deleted!")
-      .body({})
-      .send();
+    Response(res).status(200).message("User Deleted").body({ user }).send();
   };
 }
 

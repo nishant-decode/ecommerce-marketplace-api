@@ -15,14 +15,12 @@ class ReviewController {
   getAllReviews = async (req, res) => {
     Logger.info(`Request received: ${req.method} ${req.url}`);
 
-    //logic
+    const filters = req.query;
 
-    Logger.info(`All Reviews:`);
-    Response(res)
-      .status(200)
-      .message("All Reviews")
-      .body()
-      .send();
+    const reviews = await ReviewService.find(filters);
+
+    Logger.info(`All Reviews: ${reviews}`);
+    Response(res).status(200).message("All Reviews").body(reviews).send();
   };
 
   //@desc get review by reviewId
@@ -31,14 +29,16 @@ class ReviewController {
   getReview = async (req, res) => {
     Logger.info(`Request received: ${req.method} ${req.url}`);
 
-    //logic
+    const { reviewId } = req.params;
 
-    Logger.info(`Review by reviewId:`);
-    Response(res)
-      .status(200)
-      .message("Review by reviewId")
-      .body()
-      .send();
+    const review = await ReviewService.findById(reviewId);
+
+    if (!review) {
+      throw new HttpError(404, "Review not found");
+    }
+
+    Logger.info(`Review by reviewId: ${review}`);
+    Response(res).status(200).message("Review by reviewId").body(review).send();
   };
 
   //@desc get review by search query
@@ -47,13 +47,15 @@ class ReviewController {
   searchReviews = async (req, res) => {
     Logger.info(`Request received: ${req.method} ${req.url}`);
 
-    //logic
+    const filters = req.query;
 
-    Logger.info(`Reviews found by search query:`);
+    const reviews = await ReviewService.search(filters); //implement
+
+    Logger.info(`Reviews found by search query: ${reviews}`);
     Response(res)
       .status(200)
       .message("Reviews found by search query")
-      .body()
+      .body(reviews)
       .send();
   };
 
@@ -65,18 +67,18 @@ class ReviewController {
 
     const userId = req.params.userId;
 
-    if(!req.body.title || !req.body.description || !req.body.rating){
+    if (!req.body.title || !req.body.description || !req.body.rating) {
       throw new HttpError(400, "All fields mandatory");
     }
 
     // Validate user and listing
     const user = await UserService.findById(userId);
 
-    if (!user || user._id.toString()!=req.user._id.toString()) {
+    if (!user || user._id.toString() != req.user._id.toString()) {
       throw new HttpError(404, "User not found");
     }
 
-    for(const reviewedlisting of req.body.reviewedlistings){
+    for (const reviewedlisting of req.body.reviewedlistings) {
       let listing;
       switch (reviewedlisting.listingType) {
         case "Product":
@@ -112,14 +114,24 @@ class ReviewController {
   likeReview = async (req, res) => {
     Logger.info(`Request received: ${req.method} ${req.url}`);
 
-    //logic
+    const { reviewId } = req.params;
+    const userId = req.user._id;
 
-    Logger.info(`User liked a review:`);
-    Response(res)
-      .status(200)
-      .message("User liked a review")
-      .body()
-      .send();
+    const review = await ReviewService.findById(reviewId);
+
+    if (!review) {
+      throw new HttpError(404, "Review not found");
+    }
+
+    if (review.likes.includes(userId)) {
+      throw new HttpError(400, "You have already liked this review");
+    }
+
+    review.likes.push(userId);
+    const updatedReview = await review.save();
+
+    Logger.info(`Review liked by user: ${updatedReview}`);
+    Response(res).status(200).message("Review liked successfully").send();
   };
 
   //@desc update review by reviewId
@@ -128,30 +140,57 @@ class ReviewController {
   updateReview = async (req, res) => {
     Logger.info(`Request received: ${req.method} ${req.url}`);
 
-    //logic
+    const { reviewId } = req.params;
+    const updateData = req.body;
 
-    Logger.info(`Review updated by reviewId:`);
+    const review = await ReviewService.findById(reviewId);
+
+    if (!review) {
+      throw new HttpError(404, "Review not found");
+    }
+
+    if (!(user._id.toString() === review.userId.toString())) {
+      throw new HttpError(403, "Unauthorized to update this review");
+    }
+
+    const updatedReview = await ReviewService.findByIdAndUpdate(
+      reviewId,
+      updateData,
+      { new: true } // Return the updated document
+    );
+
+    Logger.info(`Review updated: ${updatedReview}`);
     Response(res)
       .status(200)
-      .message("Review updated by reviewId")
-      .body()
+      .message("Review updated successfully")
+      .body(updatedReview)
       .send();
   };
 
-  //@desc update review by reviewId
-  //@route PUT /api/review/:reviewId
+  //@desc unlike review by userId
+  //@route DELETE /api/review/:reviewId/user/:userId/unlike
   //@access private
   unlikeReview = async (req, res) => {
     Logger.info(`Request received: ${req.method} ${req.url}`);
 
-    //logic
+    const { reviewId } = req.params;
+    const userId = req.user._id;
 
-    Logger.info(`Review updated by reviewId:`);
-    Response(res)
-      .status(200)
-      .message("Review updated by reviewId")
-      .body()
-      .send();
+    const review = await ReviewService.findById(reviewId);
+
+    if (!review) {
+      throw new HttpError(404, "Review not found");
+    }
+
+    if (!review.likes.includes(userId)) {
+      throw new HttpError(400, "You haven't liked this review");
+    }
+
+    review.likes.pull(userId);
+    const updatedReview = await review.save();
+
+    Logger.info(`Review unliked by user: ${updatedReview}`);
+    Response(res).status(200).message("Review unliked successfully").send();
   };
 
   //@desc delete review by reviewId
@@ -160,14 +199,22 @@ class ReviewController {
   deleteReview = async (req, res) => {
     Logger.info(`Request received: ${req.method} ${req.url}`);
 
-    //logic
+    const { reviewId } = req.params;
 
-    Logger.info(`Review deleted by reviewId:`);
-    Response(res)
-      .status(200)
-      .message("Review deleted by reviewId")
-      .body()
-      .send();
+    const review = await ReviewService.findById(reviewId);
+
+    if (!review) {
+      throw new HttpError(404, "Review not found");
+    }
+
+    if (!(user._id.toString() === review.userId.toString())) {
+      throw new HttpError(403, "Unauthorized to delete this review");
+    }
+
+    await ReviewService.findByIdAndDelete(reviewId);
+
+    Logger.info(`Review deleted by reviewId: ${reviewId}`);
+    Response(res).status(200).message("Review deleted successfully").send();
   };
 }
 

@@ -12,14 +12,12 @@ class ProductController {
   getAllProducts = async (req, res) => {
     Logger.info(`Request received: ${req.method} ${req.url}`);
 
-    //logic
+    const filters = req.query; // Optional filters from query params
 
-    Logger.info(`All products:`);
-    Response(res)
-      .status(200)
-      .message("All products")
-      .body()
-      .send();
+    const products = await ProductService.find(filters);
+
+    Logger.info(`All products: ${products}`);
+    Response(res).status(200).message("All products").body(products).send();
   };
 
   //@desc get all products
@@ -28,13 +26,19 @@ class ProductController {
   getProduct = async (req, res) => {
     Logger.info(`Request received: ${req.method} ${req.url}`);
 
-    //logic
+    const { productId } = req.params;
 
-    Logger.info(`Product:`);
+    const product = await ProductService.findById(productId);
+
+    if (!product) {
+      throw new HttpError(404, "Product not found");
+    }
+
+    Logger.info(`Product by productId: ${product}`);
     Response(res)
       .status(200)
-      .message("Product")
-      .body()
+      .message("Product by productId")
+      .body(product)
       .send();
   };
 
@@ -44,13 +48,15 @@ class ProductController {
   searchProducts = async (req, res) => {
     Logger.info(`Request received: ${req.method} ${req.url}`);
 
-    //logic
+    const filters = req.query;
 
-    Logger.info(`All products by search query:`);
+    const products = await ProductService.search(filters); //implement search in service
+
+    Logger.info(`Products by search query: ${products}`);
     Response(res)
       .status(200)
-      .message("All products by search query")
-      .body()
+      .message("Products by search query")
+      .body(products)
       .send();
   };
 
@@ -60,7 +66,13 @@ class ProductController {
   listProduct = async (req, res) => {
     Logger.info(`Request received: ${req.method} ${req.url}`);
 
-    if (!req.body.name || !req.body.category || !req.body.department || !req.body.price || !req.body.url) {
+    if (
+      !req.body.name ||
+      !req.body.category ||
+      !req.body.department ||
+      !req.body.price ||
+      !req.body.url
+    ) {
       throw new HttpError(400, "All fields Mandatory!");
     }
 
@@ -69,9 +81,9 @@ class ProductController {
       throw new HttpError(400, "Store does not exist!");
     }
 
-    const product = await ProductService.create({ 
+    const product = await ProductService.create({
       storeId: store._id,
-      ...req.body
+      ...req.body,
     });
 
     if (product) {
@@ -92,13 +104,24 @@ class ProductController {
   updateProduct = async (req, res) => {
     Logger.info(`Request received: ${req.method} ${req.url}`);
 
-    //logic
+    const { productId } = req.params;
+    const updateData = req.body;
 
-    Logger.info(`Product updated:`);
+    const updatedProduct = await ProductService.findByIdAndUpdate(
+      productId,
+      updateData,
+      { new: true } // Return the updated document
+    );
+
+    if (!updatedProduct) {
+      throw new HttpError(404, "Product not found");
+    }
+
+    Logger.info(`Product updated by productId: ${updatedProduct}`);
     Response(res)
       .status(200)
-      .message("Product updated")
-      .body()
+      .message("Product updated by productId")
+      .body(updatedProduct)
       .send();
   };
 
@@ -108,14 +131,16 @@ class ProductController {
   deleteProduct = async (req, res) => {
     Logger.info(`Request received: ${req.method} ${req.url}`);
 
-    //logic
+    const { productId } = req.params;
 
-    Logger.info(`Product deleted:`);
-    Response(res)
-      .status(200)
-      .message("Product deleted")
-      .body()
-      .send();
+    const deletedProduct = await ProductService.findByIdAndDelete(productId);
+
+    if (!deletedProduct) {
+      throw new HttpError(404, "Product not found");
+    }
+
+    Logger.info(`Product deleted by productId: ${deletedProduct}`);
+    Response(res).status(200).message("Product deleted by productId").send();
   };
 }
 
