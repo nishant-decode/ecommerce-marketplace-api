@@ -14,15 +14,11 @@ class ReportController {
     const reports = await ReportService.find({});
 
     Logger.info(`All reports:`);
-    Response(res)
-      .status(200)
-      .message("All reports")
-      .body(reports)
-      .send();
+    Response(res).status(200).message("All reports").body(reports).send();
   };
 
   //@desc get all reports by search query
-  //@route GET /api/report/search
+  //@route GET /api/report/search?category=review&reason=inappropriate%20content
   //@access private
   searchReports = async (req, res) => {
     Logger.info(`Request received: ${req.method} ${req.url}`);
@@ -59,7 +55,7 @@ class ReportController {
 
     // Check if the report already exists
     const existingReport = await ReportService.findOne({
-      userId:req.user._id,
+      userId: req.user._id,
       category,
       categoryId,
     });
@@ -70,10 +66,10 @@ class ReportController {
 
     // Create a new report
     const newReport = await ReportService.create({
-      userId:req.user._id,
+      userId: req.user._id,
       category,
       categoryId,
-      reason:req.body.reason,
+      reason: req.body.reason,
     });
 
     Logger.info(`Report registered:`);
@@ -103,11 +99,7 @@ class ReportController {
     await ReportService.findByIdAndDelete(reportId);
 
     Logger.info(`Report deleted:`);
-    Response(res)
-      .status(200)
-      .message("Report deleted")
-      .body()
-      .send();
+    Response(res).status(200).message("Report deleted").body().send();
   };
 }
 

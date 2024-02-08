@@ -2,42 +2,50 @@ const mongoose = require("mongoose");
 
 const schema = new mongoose.Schema(
   {
-    name: {
-      type: String,
-      required: true,
-    },
     storeId: {
       type: mongoose.Schema.Types.ObjectId,
+      ref: "Store",
       required: true,
     },
-    allListingsIncluded: {
-      type: Boolean,
-      default: false,
+    offerType: {
+      type: String,
+      enum: ["ComboOffer", "AllListingsIncluded"],
       required: true,
     },
-    comboOffer: {
-      type: Boolean,
-      default: false,
+    offerName: {
+      type: String,
       required: true,
-    },
-    listings: [
-      {
-        listingType: {
-          type: String,
-          required: true,
-        },
-        listingId: {
-          type: mongoose.Schema.Types.ObjectId,
-          required: true,
-        },
-      },
-    ],
-    minAmountCondition: {
-      type: Number,
     },
     discount: {
       type: Number,
       required: true,
+    },
+    minValueCondition: {
+      type: Number,
+      default: 0,
+    },
+    maxOfferValue: {
+      type: Number,
+    },
+    listings: {
+      products: [
+        {
+          type: mongoose.Schema.Types.ObjectId,
+          ref: "Product",
+        },
+      ],
+      services: [
+        {
+          type: mongoose.Schema.Types.ObjectId,
+          ref: "Service",
+        },
+      ],
+      events: [
+        {
+          type: mongoose.Schema.Types.ObjectId,
+          ref: "Event",
+        },
+      ],
     },
   },
   {

@@ -1,6 +1,7 @@
 const HttpError = require("../helpers/httpError.helpers");
 const Response = require("../helpers/response.helpers");
 const Logger = require("../helpers/logger.helpers");
+const { sendNotification } = require("../helpers/notification.helper");
 
 const { ReviewService } = require("../services/review.service");
 const { UserService } = require("../services/user.service");
@@ -42,19 +43,39 @@ class ReviewController {
   };
 
   //@desc get review by search query
-  //@route GET /api/review/search
+  //@route GET /api/review/search?listingType=Product&listingId=609b3f2682747b001f0566e1&rating=5&containsVideo=true
   //@access public
   searchReviews = async (req, res) => {
     Logger.info(`Request received: ${req.method} ${req.url}`);
 
-    const filters = req.query;
+    const { listingType, listingId, rating, containsVideo } = req.query;
+    const filters = {};
 
-    const reviews = await ReviewService.search(filters); //implement
+    // Filter by listing type and ID together
+    if (listingType && listingId) {
+      filters["reviewedlistings"] = { $elemMatch: { listingType, listingId } };
+    }
 
-    Logger.info(`Reviews found by search query: ${reviews}`);
+    // Filter by rating
+    if (rating) {
+      filters["rating"] = parseInt(rating);
+    }
+
+    // Filter by video
+    if (containsVideo) {
+      if (containsVideo.toLowerCase() === "true") {
+        filters["videoUrl"] = { $exists: true };
+      } else if (containsVideo.toLowerCase() === "false") {
+        filters["videoUrl"] = { $exists: false };
+      }
+    }
+
+    const reviews = await ReviewService.find(filters);
+
+    Logger.info(`Reviews matching the search criteria: ${reviews}`);
     Response(res)
       .status(200)
-      .message("Reviews found by search query")
+      .message("Reviews matching the search criteria")
       .body(reviews)
       .send();
   };
@@ -74,13 +95,13 @@ class ReviewController {
     // Validate user and listing
     const user = await UserService.findById(userId);
 
-    if (!user || user._id.toString() != req.user._id.toString()) {
-      throw new HttpError(404, "User not found");
+    if (!user || userId.toString() != req.user._id.toString()) {
+      throw new HttpError(404, "Unauthorized!");
     }
 
     for (const reviewedlisting of req.body.reviewedlistings) {
       let listing;
-      switch (reviewedlisting.listingType) {
+      switch (reviewedlisting.listingType.toString()) {
         case "Product":
           listing = await ProductService.findById(reviewedlisting.listingId);
           break;
@@ -94,7 +115,7 @@ class ReviewController {
           throw new HttpError(400, "Invalid listing type");
       }
       if (!listing) {
-        throw new HttpError(404, `${listingType} not found`);
+        throw new HttpError(404, `${reviewedlisting.listingType} not found`);
       }
     }
 
@@ -117,6 +138,12 @@ class ReviewController {
     const { reviewId } = req.params;
     const userId = req.user._id;
 
+    const user = await UserService.findById(userId);
+
+    if (!user || userId.toString() != req.user._id.toString()) {
+      throw new HttpError(404, "Unauthorized!");
+    }
+
     const review = await ReviewService.findById(reviewId);
 
     if (!review) {
@@ -129,6 +156,12 @@ class ReviewController {
 
     review.likes.push(userId);
     const updatedReview = await review.save();
+
+    await sendNotification(
+      review.userId,
+      "Review",
+      `${user.name.first} liked your review ${review.title}.`
+    );
 
     Logger.info(`Review liked by user: ${updatedReview}`);
     Response(res).status(200).message("Review liked successfully").send();
@@ -149,15 +182,16 @@ class ReviewController {
       throw new HttpError(404, "Review not found");
     }
 
-    if (!(user._id.toString() === review.userId.toString())) {
-      throw new HttpError(403, "Unauthorized to update this review");
+    if (
+      req.user._id.toString() !== review.userId.toString() &&
+      req.user.role.toString() !== "Admin"
+    ) {
+      throw new HttpError(403, "Unauthorized!");
     }
 
-    const updatedReview = await ReviewService.findByIdAndUpdate(
-      reviewId,
-      updateData,
-      { new: true } // Return the updated document
-    );
+    Object.assign(review, updateData);
+
+    const updatedReview = await review.save();
 
     Logger.info(`Review updated: ${updatedReview}`);
     Response(res)
@@ -174,7 +208,13 @@ class ReviewController {
     Logger.info(`Request received: ${req.method} ${req.url}`);
 
     const { reviewId } = req.params;
-    const userId = req.user._id;
+    const { userId } = req.params;
+
+    const user = await UserService.findById(userId);
+
+    if (!user || userId.toString() != req.user._id.toString()) {
+      throw new HttpError(404, "Unauthorized!");
+    }
 
     const review = await ReviewService.findById(reviewId);
 
@@ -207,8 +247,11 @@ class ReviewController {
       throw new HttpError(404, "Review not found");
     }
 
-    if (!(user._id.toString() === review.userId.toString())) {
-      throw new HttpError(403, "Unauthorized to delete this review");
+    if (
+      req.user._id.toString() !== review.userId.toString() &&
+      req.user.role.toString() !== "Admin"
+    ) {
+      throw new HttpError(403, "Unauthorized!");
     }
 
     await ReviewService.findByIdAndDelete(reviewId);

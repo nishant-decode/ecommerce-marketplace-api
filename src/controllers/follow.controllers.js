@@ -10,7 +10,7 @@ class FollowController {
   //@access public
   getAllStoreFollowers = async (req, res) => {
     Logger.info(`Request received: ${req.method} ${req.url}`);
-  
+
     const storeId = req.params.storeId;
 
     const followers = await FollowService.find({ storeId });
@@ -30,7 +30,7 @@ class FollowController {
     Logger.info(`Request received: ${req.method} ${req.url}`);
 
     const { storeId } = req.params;
-    const { userId } = req.user._id;
+    const userId = req.user._id;
 
     const existingFollow = await FollowService.findOne({ storeId, userId });
     if (existingFollow) {
@@ -39,11 +39,7 @@ class FollowController {
 
     await FollowService.create({ storeId, userId });
     Logger.info(`Store followed:`);
-    Response(res)
-      .status(200)
-      .message("Store followed")
-      .body()
-      .send();
+    Response(res).status(200).message("Store followed").body().send();
   };
 
   //@desc unfollow a store
@@ -53,18 +49,13 @@ class FollowController {
     Logger.info(`Request received: ${req.method} ${req.url}`);
 
     const { storeId } = req.params;
-    const { userId } = req.user._id;
+    const userId = req.user._id;
 
-    await FollowService.findOneAndDelete({ storeId, userId });
+    await FollowService.deleteOne({ storeId, userId });
 
     Logger.info(`Store unfollowed:`);
-    Response(res)
-      .status(200)
-      .message("Store unfollowed")
-      .body()
-      .send();
+    Response(res).status(200).message("Store unfollowed").body().send();
   };
-
 }
 
 module.exports.FollowController = new FollowController();

@@ -7,22 +7,23 @@ const schema = new mongoose.Schema(
       ref: "user",
       required: true,
     },
-    orderType: {
-      type: String,
-      required: true,
-      enum: ["Product", "Service", "Event"],
-    },
     listings: [
       {
-        type: mongoose.Schema.Types.ObjectId,
-        refPath: "orderType",
-        required: true,
+        listingId: {
+          type: mongoose.Schema.Types.ObjectId,
+          required: true,
+        },
+        listingType: {
+          type: String,
+          required: true,
+          enum: ["Product", "Service", "Event"],
+        },
+        status: {
+          type: String,
+          default: "Order Placed",
+        },
       },
     ],
-    status: {
-      type: String,
-      default: "Order Placed",
-    },
     addressId: {
       type: mongoose.Schema.Types.ObjectId,
       required: true,

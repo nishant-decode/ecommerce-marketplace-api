@@ -1,6 +1,8 @@
 const { EventService } = require("../services/event.service");
 const { AddressService } = require("../services/address.service");
 const { StoreService } = require("../services/store.service");
+const { ReviewService } = require("../services/review.service");
+const { TicketService } = require("../services/ticket.service");
 
 const HttpError = require("../helpers/httpError.helpers");
 const Response = require("../helpers/response.helpers");
@@ -42,21 +44,65 @@ class EventController {
   };
 
   //@desc search events by search query
-  //@route GET /api/event/search
+  //@route GET /api/event/search?storeId=123&category=Music&minPrice=50&maxPrice=100&minRating=4
   //@access public
   searchEvents = async (req, res) => {
     Logger.info(`Request received: ${req.method} ${req.url}`);
 
-    const filters = req.query; // Search query parameters
+    const filters = req.query; // Optional filters from query params
+    const { minRating, storeId, category, minPrice, maxPrice } = req.query; // Extract additional filters
 
-    const events = await EventService.search(filters);
+    let events = await EventService.find(filters);
 
-    Logger.info(`Events found by search query: ${events}`);
-    Response(res)
-      .status(200)
-      .message("Events found by search query")
-      .body(events)
-      .send();
+    // Apply additional filters
+    if (storeId) {
+      events = events.filter((event) => event.storeId.toString() === storeId);
+    }
+    if (category) {
+      events = events.filter((event) => event.category === category);
+    }
+    if (minPrice) {
+      events = events.filter(
+        (event) => event.price.original >= parseInt(minPrice)
+      );
+    }
+    if (maxPrice) {
+      events = events.filter(
+        (event) => event.price.original <= parseInt(maxPrice)
+      );
+    }
+    if (minRating) {
+      const eventIds = events.map((event) => event._id);
+      const reviews = await ReviewService.find({
+        reviewedlistings: { $in: eventIds },
+      });
+      events = this.filterEventsByMinRating(
+        events,
+        reviews,
+        parseInt(minRating)
+      );
+    }
+
+    Logger.info(`Filtered events: ${events}`);
+    Response(res).status(200).message("Filtered events").body(events).send();
+  };
+
+  filterEventsByMinRating = (events, reviews, minRating) => {
+    return events.filter((event) => {
+      const eventReviews = reviews.filter((review) =>
+        review.reviewedlistings.includes(event._id)
+      );
+      const averageRating = this.calculateAverageRating(eventReviews);
+      return averageRating >= minRating;
+    });
+  };
+
+  calculateAverageRating = (reviews) => {
+    if (reviews.length === 0) {
+      return 0;
+    }
+    const totalRating = reviews.reduce((sum, review) => sum + review.rating, 0);
+    return totalRating / reviews.length;
   };
 
   //@desc create a event by storeId
@@ -79,6 +125,10 @@ class EventController {
     const store = await StoreService.findById(req.params.storeId);
     if (!store) {
       throw new HttpError(400, "Store does not exist!");
+    }
+
+    if (store.sellerId.toString() !== req.user._id.toString()) {
+      throw new HttpError(404, "Unauthorized!");
     }
 
     const address = await AddressService.findById(req.body.address);
@@ -112,11 +162,22 @@ class EventController {
     const { eventId } = req.params;
     const updateData = req.body;
 
-    const updatedEvent = await EventService.findByIdAndUpdate(
-      eventId,
-      updateData,
-      { new: true } // Return the updated document
-    );
+    const event = await EventService.findById(eventId);
+    if (!event) {
+      throw new HttpError(404, "Event not found!");
+    }
+    const store = await StoreService.findById(event.storeId);
+
+    if (
+      store.sellerId.toString() !== req.user._id.toString() &&
+      req.user.role.toString() !== "Admin"
+    ) {
+      throw new HttpError(404, "Unauthorized!");
+    }
+
+    Object.assign(event, updateData);
+
+    const updatedEvent = await event.save();
 
     if (!updatedEvent) {
       throw new HttpError(404, "Event not found");
@@ -138,11 +199,26 @@ class EventController {
 
     const { eventId } = req.params;
 
+    const event = await EventService.findById(eventId);
+    if (!event) {
+      throw new HttpError(404, "Event not found!");
+    }
+    const store = await StoreService.findById(event.storeId);
+
+    if (
+      store.sellerId.toString() !== req.user._id.toString() &&
+      req.user.role.toString() !== "Admin"
+    ) {
+      throw new HttpError(404, "Unauthorized!");
+    }
+
     const deletedEvent = await EventService.findByIdAndDelete(eventId);
 
     if (!deletedEvent) {
       throw new HttpError(404, "Event not found");
     }
+
+    await TicketService.deleteMany({ eventId });
 
     Logger.info(`Event deleted: ${deletedEvent}`);
     Response(res).status(200).message("Event deleted successfully").send();

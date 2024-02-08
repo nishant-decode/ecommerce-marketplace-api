@@ -17,11 +17,7 @@ class PostController {
 
     const posts = await PostService.find({});
     Logger.info(`All posts:`);
-    Response(res)
-      .status(200)
-      .message("All posts")
-      .body(posts)
-      .send();
+    Response(res).status(200).message("All posts").body(posts).send();
   };
 
   //@desc get all posts
@@ -36,11 +32,7 @@ class PostController {
     }
 
     Logger.info(`Post:`);
-    Response(res)
-      .status(200)
-      .message("Post")
-      .body(post)
-      .send();
+    Response(res).status(200).message("Post").body(post).send();
   };
 
   //@desc create a post by sellerId
@@ -59,25 +51,34 @@ class PostController {
       throw new HttpError(404, "Store not found");
     }
 
+    if (store.sellerId.toString() !== req.user._id.toString()) {
+      throw new HttpError(404, "Unauthorized!");
+    }
+
     const { content, url, listings } = req.body;
 
-    const isValidListingIds = await Promise.all(listings.map(async (listing) => {
-      const { listingType, listingId } = listing;
+    const isValidListingIds = await Promise.all(
+      listings.map(async (listing) => {
+        const { listingType, listingId } = listing;
 
-      switch (listingType) {
-        case 'product':
-          return await ProductService.exists({ _id: listingId });
-        case 'service':
-          return await ServiceService.exists({ _id: listingId });
-        case 'event':
-          return await EventService.exists({ _id: listingId });
-        default:
-          return false;
-      }
-    }));
+        switch (listingType) {
+          case "product":
+            return await ProductService.exists({ _id: listingId });
+          case "service":
+            return await ServiceService.exists({ _id: listingId });
+          case "event":
+            return await EventService.exists({ _id: listingId });
+          default:
+            return false;
+        }
+      })
+    );
 
     if (!isValidListingIds.every(Boolean)) {
-      throw new HttpError(400, "Invalid listingIds. Each listingId must belong to its respective collection (product, service, or event)");
+      throw new HttpError(
+        400,
+        "Invalid listingIds. Each listingId must belong to its respective collection (product, service, or event)"
+      );
     }
 
     // Create a new post
@@ -85,11 +86,15 @@ class PostController {
       storeId,
       content,
       url,
-      listings
+      listings,
     });
 
     Logger.info(`Post added successfully: ${post}`);
-    Response(res).status(201).message("Post added successfully:").body({post}).send();
+    Response(res)
+      .status(201)
+      .message("Post added successfully:")
+      .body({ post })
+      .send();
   };
 
   //@desc update posts
@@ -100,11 +105,11 @@ class PostController {
 
     const { postId } = req.params;
 
-    const { content, url, listings } = req.body;
+    const updateData = req.body;
 
-    if(listings){
+    if (req.body.listings) {
       const isValidListingIds = await Promise.all(
-        (listings).map(async (listing) => {
+        req.body.listings.map(async (listing) => {
           const { listingType, listingId } = listing;
 
           switch (listingType) {
@@ -121,22 +126,37 @@ class PostController {
       );
 
       if (!isValidListingIds.every(Boolean)) {
-        throw new HttpError(400, "Invalid listingIds. Each listingId must belong to its respective collection (product, service, or event)");
+        throw new HttpError(
+          400,
+          "Invalid listingIds. Each listingId must belong to its respective collection (product, service, or event)"
+        );
       }
     }
 
-    // Update the post
-    const updatedPost = await PostService.findByIdAndUpdate(postId, {
-      content,
-      url,
-      listings,
-    });
+    const post = await PostService.findById(postId);
+
+    const store = await StoreService.findById(post.storeId);
+
+    if (
+      store.sellerId.toString() !== req.user._id.toString() &&
+      req.user.role.toString() !== "Admin"
+    ) {
+      throw new HttpError(404, "Unauthorized!");
+    }
+
+    Object.assign(post, updateData);
+
+    const updatedPost = await post.save();
+
+    if (!updatedPost) {
+      throw new HttpError(404, "Post not found");
+    }
 
     Logger.info(`Post updated`);
     Response(res)
       .status(200)
       .message("Post updated")
-      .body()
+      .body({ updatedPost })
       .send();
   };
 
@@ -155,15 +175,20 @@ class PostController {
       throw new HttpError(404, "Post not found");
     }
 
+    const store = await StoreService.findById(existingPost.storeId);
+
+    if (
+      store.sellerId.toString() !== req.user._id.toString() &&
+      req.user.role.toString() !== "Admin"
+    ) {
+      throw new HttpError(404, "Unauthorized!");
+    }
+
     // Delete the post
     await PostService.findByIdAndDelete(postId);
 
     Logger.info(`Post deleted: ${postId}`);
-    Response(res)
-      .status(200)
-      .message("Post deleted")
-      .body()
-      .send();
+    Response(res).status(200).message("Post deleted").body().send();
   };
 }
 

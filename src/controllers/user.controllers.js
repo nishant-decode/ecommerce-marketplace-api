@@ -264,6 +264,15 @@ class UserController {
       throw new HttpError(401, "User does not exsist!");
     }
 
+    console.log(user._id + " " + req.user._id + " " + req.user.role);
+
+    if (
+      user._id.toString() !== req.user._id.toString() &&
+      req.user.role !== "Admin"
+    ) {
+      throw new HttpError(401, "Unauthorized!");
+    }
+
     user.password = newPassword;
     await user.save();
 
@@ -314,6 +323,13 @@ class UserController {
 
     if (!user) {
       throw new HttpError(404, "User not found");
+    }
+
+    if (
+      user._id.toString() !== req.user._id.toString() &&
+      req.user.role !== "Admin"
+    ) {
+      throw new HttpError(401, "Unauthorized!");
     }
 
     Logger.info(`User: ${user}`);

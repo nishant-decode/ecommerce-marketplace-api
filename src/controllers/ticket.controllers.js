@@ -4,6 +4,7 @@ const { EventService } = require("../services/event.service");
 const HttpError = require("../helpers/httpError.helpers");
 const Response = require("../helpers/response.helpers");
 const Logger = require("../helpers/logger.helpers");
+const { StoreService } = require("../services/store.service");
 
 class TicketController {
   //@desc get a Ticket by ticketId
@@ -54,6 +55,15 @@ class TicketController {
     // Check if the required fields are present
     if (!eventId || !storeId || !name || !price || !quantity || !eventTimings) {
       throw new HttpError(400, "Missing required fields");
+    }
+
+    const store = await StoreService.findById(storeId);
+    if (!store) {
+      throw new HttpError(400, "Store does not exist!");
+    }
+
+    if (store.sellerId.toString() !== req.user._id.toString()) {
+      throw new HttpError(404, "Unauthorized!");
     }
 
     // Check if eventTimings exist in the slotsAvailable of the corresponding event
@@ -108,11 +118,22 @@ class TicketController {
     const { ticketId } = req.params;
     const updateData = req.body;
 
-    const updatedTicket = await TicketService.findByIdAndUpdate(
-      ticketId,
-      updateData,
-      { new: true }
-    );
+    const ticket = await TicketService.findById(ticketId);
+    if (!ticket) {
+      throw new HttpError(404, "Ticket not found!");
+    }
+    const store = await StoreService.findById(ticket.storeId);
+
+    if (
+      store.sellerId.toString() !== req.user._id.toString() &&
+      req.user.role.toString() !== "Admin"
+    ) {
+      throw new HttpError(404, "Unauthorized!");
+    }
+
+    Object.assign(ticket, updateData);
+
+    const updatedTicket = await ticket.save();
 
     if (!updatedTicket) {
       throw new HttpError(404, "Ticket not found");
@@ -133,6 +154,19 @@ class TicketController {
     Logger.info(`Request received: ${req.method} ${req.url}`);
 
     const { ticketId } = req.params;
+
+    const ticket = await TicketService.findById(ticketId);
+    if (!ticket) {
+      throw new HttpError(404, "Ticket not found!");
+    }
+    const store = await StoreService.findById(ticket.storeId);
+
+    if (
+      store.sellerId.toString() !== req.user._id.toString() &&
+      req.user.role.toString() !== "Admin"
+    ) {
+      throw new HttpError(404, "Unauthorized!");
+    }
 
     const deletedTicket = await TicketService.findByIdAndDelete(ticketId);
 

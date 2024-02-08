@@ -1,9 +1,14 @@
 const HttpError = require("../helpers/httpError.helpers");
 const Response = require("../helpers/response.helpers");
 const Logger = require("../helpers/logger.helpers");
+const { sendNotification } = require("../helpers/notification.helper");
 
 const { OrderService } = require("../services/order.service");
 const { CartService } = require("../services/cart.service");
+const { StoreService } = require("../services/store.service");
+const { ProductVariantService } = require("../services/productVariant.service");
+const { ServiceService } = require("../services/service.service");
+const { TicketService } = require("../services/ticket.service");
 
 class OrderController {
   //@desc get all orders
@@ -11,16 +16,12 @@ class OrderController {
   //@access private
   getAllOrders = async (req, res) => {
     Logger.info(`Request received: ${req.method} ${req.url}`);
-  
+
     // Get all orders logic
     const orders = await OrderService.find({});
-  
+
     Logger.info(`All orders:`);
-    Response(res)
-      .status(200)
-      .message("All orders")
-      .body(orders)
-      .send();
+    Response(res).status(200).message("All orders").body(orders).send();
   };
 
   //@desc get order by orderId
@@ -35,11 +36,7 @@ class OrderController {
     const order = await OrderService.findById(orderId);
 
     Logger.info(`Order:`);
-    Response(res)
-      .status(200)
-      .message("Order")
-      .body(order)
-      .send();
+    Response(res).status(200).message("Order").body(order).send();
   };
 
   //@desc search all orders by search query
@@ -48,14 +45,75 @@ class OrderController {
   searchAllOrders = async (req, res) => {
     Logger.info(`Request received: ${req.method} ${req.url}`);
 
-    //logic
+    const { storeId, listingType, orderStatus } = req.query;
+
+    // Construct search filter based on provided parameters
+    const searchFilter = {};
+
+    if (listingType) {
+      searchFilter["listings.listingType"] = listingType;
+    }
+
+    if (orderStatus) {
+      searchFilter["listings.status"] = orderStatus;
+    }
+
+    // Query all orders based on the constructed filter
+    const orders = await OrderService.find(searchFilter);
+
+    let filteredOrders = orders;
+
+    // If storeId is provided, filter orders by matching storeId in the listings
+    if (storeId) {
+      filteredOrders = orders.filter((order) => {
+        return order.listings.some((listing) => {
+          if (!listing.listingType || !listing.listingId) {
+            return false;
+          }
+          switch (listing.listingType) {
+            case "Product":
+              return this.findStoreIdByProductId(listing.listingId) === storeId;
+            case "Service":
+              return this.findStoreIdByServiceId(listing.listingId) === storeId;
+            case "Event":
+              return this.findStoreIdByTicketId(listing.listingId) === storeId;
+            default:
+              return false;
+          }
+        });
+      });
+    }
 
     Logger.info(`Orders found by search query:`);
     Response(res)
       .status(200)
       .message("Orders found by search query")
-      .body()
+      .body(filteredOrders)
       .send();
+  };
+
+  findStoreIdByProductId = async (productId) => {
+    const productVariant = await ProductVariantService.findOne({ productId });
+    if (productVariant) {
+      return productVariant.storeId;
+    }
+    return null;
+  };
+
+  findStoreIdByServiceId = async (serviceId) => {
+    const service = await ServiceService.findById(serviceId);
+    if (service) {
+      return service.storeId;
+    }
+    return null;
+  };
+
+  findStoreIdByTicketId = async (ticketId) => {
+    const ticket = await TicketService.findById(ticketId);
+    if (ticket) {
+      return ticket.storeId;
+    }
+    return null;
   };
 
   //@desc get all store orders
@@ -66,15 +124,20 @@ class OrderController {
 
     const { storeId } = req.params;
 
+    const store = await StoreService.findById(storeId);
+
+    if (
+      store.sellerId.toString() !== req.user._id.toString() &&
+      req.user.role.toString() !== "Admin"
+    ) {
+      throw new HttpError(404, "Unauthorized!");
+    }
+
     // Get all store orders logic
     const storeOrders = await OrderService.find({ storeId });
 
     Logger.info(`Store orders:`);
-    Response(res)
-      .status(200)
-      .message("Store orders")
-      .body(storeOrders)
-      .send();
+    Response(res).status(200).message("Store orders").body(storeOrders).send();
   };
 
   //@desc get store order by orderId
@@ -85,15 +148,20 @@ class OrderController {
 
     const { orderId, storeId } = req.params;
 
+    const store = await StoreService.findById(storeId);
+
+    if (
+      store.sellerId.toString() !== req.user._id.toString() &&
+      req.user.role.toString() !== "Admin"
+    ) {
+      throw new HttpError(404, "Unauthorized!");
+    }
+
     // Get store order by orderId logic
     const storeOrder = await OrderService.findOne({ _id: orderId, storeId });
 
     Logger.info(`Store order:`);
-    Response(res)
-      .status(200)
-      .message("Store order")
-      .body(storeOrder)
-      .send();
+    Response(res).status(200).message("Store order").body(storeOrder).send();
   };
 
   //@desc get all store orders by search query
@@ -102,13 +170,45 @@ class OrderController {
   searchStoreOrders = async (req, res) => {
     Logger.info(`Request received: ${req.method} ${req.url}`);
 
-    //logic
+    const { storeId } = req.params;
 
-    Logger.info(`Store orders found by search query:`);
+    const store = await StoreService.findById(storeId);
+
+    if (
+      store.sellerId.toString() !== req.user._id.toString() &&
+      req.user.role.toString() !== "Admin"
+    ) {
+      throw new HttpError(404, "Unauthorized!");
+    }
+
+    // Step 2: Query all orders from the database
+    const orders = await OrderService.find({});
+
+    // Step 3: Filter the orders based on the store ID found in the listings of each order
+    const storeOrders = orders.filter((order) => {
+      return order.listings.some((listing) => {
+        if (!listing.listingType || !listing.listingId) {
+          return false;
+        }
+        switch (listing.listingType) {
+          case "Product":
+            return this.findStoreIdByProductId(listing.listingId) === storeId;
+          case "Service":
+            return this.findStoreIdByServiceId(listing.listingId) === storeId;
+          case "Event":
+            return this.findStoreIdByTicketId(listing.listingId) === storeId;
+          default:
+            return false;
+        }
+      });
+    });
+
+    // Step 4: Return the filtered orders
+    Logger.info(`Store orders found for storeId ${storeId}:`);
     Response(res)
       .status(200)
-      .message("Store orders found by search query")
-      .body()
+      .message("Store orders found")
+      .body(storeOrders)
       .send();
   };
 
@@ -120,15 +220,18 @@ class OrderController {
 
     const { userId } = req.params;
 
+    if (
+      userId.toString() !== req.user._id.toString() &&
+      req.user.role.toString() !== "Admin"
+    ) {
+      throw new HttpError(404, "Unauthorized!");
+    }
+
     // Get all user orders logic
     const userOrders = await OrderService.find({ userId });
 
     Logger.info(`User orders:`);
-    Response(res)
-      .status(200)
-      .message("User orders")
-      .body(userOrders)
-      .send();
+    Response(res).status(200).message("User orders").body(userOrders).send();
   };
 
   //@desc get user order
@@ -139,8 +242,18 @@ class OrderController {
 
     const { orderId, userId } = req.params;
 
+    if (
+      userId.toString() !== req.user._id.toString() &&
+      req.user.role.toString() !== "Admin"
+    ) {
+      throw new HttpError(404, "Unauthorized!");
+    }
+
     // Validate orderId and userId
-    if (!mongoose.Types.ObjectId.isValid(orderId) || !mongoose.Types.ObjectId.isValid(userId)) {
+    if (
+      !mongoose.Types.ObjectId.isValid(orderId) ||
+      !mongoose.Types.ObjectId.isValid(userId)
+    ) {
       throw HttpError(400, "Invalid orderId or userId");
     }
 
@@ -148,11 +261,7 @@ class OrderController {
     const userOrder = await OrderService.findOne({ _id: orderId, userId });
 
     Logger.info(`User order:`);
-    Response(res)
-      .status(200)
-      .message("User order")
-      .body(userOrder)
-      .send();
+    Response(res).status(200).message("User order").body(userOrder).send();
   };
 
   //@desc get all user orders by search query
@@ -161,13 +270,29 @@ class OrderController {
   searchUserOrders = async (req, res) => {
     Logger.info(`Request received: ${req.method} ${req.url}`);
 
-    //logic
+    const { userId } = req.params;
+    const { status } = req.query;
+
+    if (
+      userId.toString() !== req.user._id.toString() &&
+      req.user.role.toString() !== "Admin"
+    ) {
+      throw new HttpError(404, "Unauthorized!");
+    }
+
+    let userOrders = await OrderService.find({ userId });
+
+    if (status) {
+      userOrders = userOrders.filter((order) => {
+        return order.listings.some((listing) => listing.status === status);
+      });
+    }
 
     Logger.info(`User orders found by search query:`);
     Response(res)
       .status(200)
       .message("User orders found by search query")
-      .body()
+      .body(userOrders)
       .send();
   };
 
@@ -177,103 +302,122 @@ class OrderController {
   createOrder = async (req, res) => {
     Logger.info(`Request received: ${req.method} ${req.url}`);
 
-    const userId = req.params.userId;
+    const { userId } = req.params;
+    const { addressId, paymentMethod } = req.body;
 
-    // Fetch cart
-    const cart = await CartService.find({ userId })
+    if (userId.toString() !== req.user._id.toString()) {
+      throw new HttpError(404, "Unauthorized!");
+    }
 
-    // Validate cart
+    const cart = await CartService.findOne({ userId });
+
     if (!cart) {
-      throw new HttpError(404, "Cart not found");
+      throw new HttpError(404, "Cart empty!");
     }
 
-    if (
-      !cart.products ||
-      !cart.services ||
-      !cart.events ||
-      (cart.products.length === 0 &&
-        cart.services.length === 0 &&
-        cart.events.length === 0)
-    ) {
-      throw new HttpError(400, "Cart is empty");
+    const listings = [];
+    for (const product of cart.products) {
+      listings.push({
+        listingId: product.productVariantId,
+        listingType: "Product",
+        status: "Order Placed",
+      });
+    }
+    for (const service of cart.services) {
+      listings.push({
+        listingId: service.serviceId,
+        listingType: "Service",
+        status: "Order Placed",
+      });
+    }
+    for (const event of cart.events) {
+      listings.push({
+        listingId: event.ticketId,
+        listingType: "Event",
+        status: "Order Placed",
+      });
     }
 
-    //fetch total amount for each item type from cart
-    const productTotalAmount = cart.couponDiscountedPrice.product;
-    const serviceTotalAmount = cart.couponDiscountedPrice.service;
-    const eventTotalAmount = cart.couponDiscountedPrice.event;
-    
+    const order = await OrderService.create({
+      userId,
+      listings,
+      addressId,
+      totalAmount: cart.totalAmount,
+      paymentMethod,
+    });
 
-    // Create separate orders for each item type
-    const productOrder = await (cart.products.length
-      ? OrderService.create({
-          userId,
-          orderType: "Product",
-          listingId: cart.products.map((item) => item.productVariantId),
-          address: req.body.address,
-          totalAmount: discountedProductAmount,
-          paymentMethod: req.body.paymentMethod,
-        })
-      : null);
+    await sendNotification(userId, "Order", `Order placed!.`);
 
-    const serviceOrder = await (cart.services.length
-      ? OrderService.create({
-          userId,
-          orderType: "Service",
-          listingId: cart.services.map((item) => item.serviceId),
-          address: req.body.address,
-          totalAmount: discountedServiceAmount,
-          paymentMethod: req.body.paymentMethod,
-        })
-      : null);
-
-    const eventOrder = await (cart.events.length
-      ? OrderService.create({
-          userId,
-          orderType: "Event",
-          listingId: cart.events.map((item) => item.ticketId),
-          totalAmount: discountedEventAmount,
-          paymentMethod: req.body.paymentMethod,
-        })
-      : null);
-
-    // Clear the user's cart
-    cart.products = [];
-    cart.services = [];
-    cart.events = [];
-    await cart.save();
-
-    Logger.info(
-      `Orders placed successfully ${productOrder} ${serviceOrder} ${eventOrder}`
+    await CartService.findByIdAndUpdate(
+      { _id: cart._id },
+      {
+        products: [],
+        services: [],
+        events: [],
+        offerApplied: null,
+        originalTotalPrice: {},
+        couponDiscountedAmount: null,
+        totalAmount: 0,
+      }
     );
+
+    Logger.info("Order placed successfully");
     Response(res)
       .status(200)
-      .message("Orders placed successfully")
-      .body({ productOrder, serviceOrder, eventOrder })
+      .message("Order placed successfully")
+      .body({ order })
       .send();
   };
 
   //@desc update order
-  //@route PUT /api/order/:orderId
+  //@route PUT /api/order/:orderId/:listingType/:listindId
   //@access private
   updateOrderStatus = async (req, res) => {
     Logger.info(`Request received: ${req.method} ${req.url}`);
 
-    const { orderId } = req.params;
-    const { status } = req.body;
+    const { orderId, listingType, listingId } = req.params;
+    const { orderStatus } = req.body;
 
-    // Validate status
-    if (!status || typeof status !== "string") {
-      throw new HttpError(400, "Invalid status");
+    if (!["Product", "Service", "Event"].includes(listingType)) {
+      throw new HttpError(400, "Invalid listingType");
     }
 
-    // Update order status logic
-    const updatedOrder = await OrderService.findByIdAndUpdate(orderId, { status }, { new: true });
+    const order = await OrderService.findById(orderId);
 
-    Logger.info(`Order status updated: ${updatedOrder}`);
+    if (!order) {
+      throw new HttpError(404, "Order not found");
+    }
+
+    let listingIndex = -1;
+    for (let i = 0; i < order.listings.length; i++) {
+      const listing = order.listings[i];
+      if (
+        listing.listingId.toString() === listingId &&
+        listing.listingType === listingType
+      ) {
+        listingIndex = i;
+        break;
+      }
+    }
+
+    if (listingIndex === -1) {
+      throw new HttpError(404, "Listing not found in the order");
+    }
+
+    order.listings[listingIndex].status = orderStatus;
+
+    const updatedOrder = await order.save();
+
+    await sendNotification(
+      order.userId,
+      "Order",
+      `Your order is ${orderStatus}.`
+    );
+
+    Logger.info("Order status updated successfully");
     Response(res)
       .status(200)
-      .message("Order status updated")
+      .message("Order status updated successfully")
       .body({ updatedOrder })
       .send();
   };
@@ -296,10 +440,6 @@ class OrderController {
       .body({ deletedOrder })
       .send();
   };
-
 }
 
 module.exports.OrderController = new OrderController();
-
-// checkout = async (req, res) => {
-  

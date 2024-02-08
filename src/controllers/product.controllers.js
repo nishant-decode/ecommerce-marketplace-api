@@ -1,9 +1,11 @@
 const { ProductService } = require("../services/product.service");
 const { StoreService } = require("../services/store.service");
+const { ReviewService } = require("../services/review.service");
 
 const HttpError = require("../helpers/httpError.helpers");
 const Response = require("../helpers/response.helpers");
 const Logger = require("../helpers/logger.helpers");
+const { ProductVariantService } = require("../services/productVariant.service");
 
 class ProductController {
   //@desc get all products
@@ -43,19 +45,56 @@ class ProductController {
   };
 
   //@desc get all products by search query
-  //@route GET /api/product/search?categories[]=Electronics&categories[]=Clothing&departments[]=Appliances&departments[]=Fashion&departments[]=Home&sellerIds[]=123&sellerIds[]=456&variantIds[]=789&variantIds[]=012&variantAttributes[]=Color:Red&variantAttributes[]=Size:Medium&minPrice=50&maxPrice=200&minRating=4
+  //@route GET /api/product/search?categories=Electronics,Clothing&departments=Appliances,Fashion&storeIds=123,456&minPrice=50&maxPrice=200&minRating=4
   //@access public
   searchProducts = async (req, res) => {
     Logger.info(`Request received: ${req.method} ${req.url}`);
 
-    const filters = req.query;
+    const {
+      categories,
+      departments,
+      storeIds,
+      variantAttributes,
+      minPrice,
+      maxPrice,
+      minRating,
+    } = req.query;
 
-    const products = await ProductService.search(filters); //implement search in service
+    const filters = {};
 
-    Logger.info(`Products by search query: ${products}`);
+    if (categories) filters.category = { $in: categories };
+    if (departments) filters.department = { $in: departments };
+    if (storeIds) filters.storeId = { $in: storeIds };
+    if (variantAttributes)
+      filters.variantAttributes = { $in: variantAttributes };
+    if (minPrice || maxPrice) {
+      filters.price = {};
+      if (minPrice) filters.price.original = { $gte: minPrice };
+      if (maxPrice)
+        filters.price.original = { ...filters.price.original, $lte: maxPrice };
+    }
+
+    const products = await ProductService.find(filters);
+
+    if (minRating) {
+      const productIds = products.map((product) => product._id);
+      const reviews = await ReviewService.find({
+        reviewedlistings: { $in: productIds },
+      });
+
+      products = products.filter((product) => {
+        const productReviews = reviews.filter((review) =>
+          review.reviewedlistings.includes(product._id)
+        );
+        const averageRating = calculateAverageRating(productReviews);
+        return averageRating >= minRating;
+      });
+    }
+
+    Logger.info(`Products found by search query: ${products}`);
     Response(res)
       .status(200)
-      .message("Products by search query")
+      .message("Products found by search query")
       .body(products)
       .send();
   };
@@ -79,6 +118,10 @@ class ProductController {
     const store = await StoreService.findById(req.params.storeId);
     if (!store) {
       throw new HttpError(400, "Store does not exist!");
+    }
+
+    if (store.sellerId.toString() !== req.user._id.toString()) {
+      throw new HttpError(404, "Unauthorized!");
     }
 
     const product = await ProductService.create({
@@ -107,11 +150,22 @@ class ProductController {
     const { productId } = req.params;
     const updateData = req.body;
 
-    const updatedProduct = await ProductService.findByIdAndUpdate(
-      productId,
-      updateData,
-      { new: true } // Return the updated document
-    );
+    const product = await ProductService.findById(productId);
+    if (!product) {
+      throw new HttpError(404, "Product not found!");
+    }
+    const store = await StoreService.findById(product.storeId);
+
+    if (
+      store.sellerId.toString() !== req.user._id.toString() &&
+      req.user.role.toString() !== "Admin"
+    ) {
+      throw new HttpError(404, "Unauthorized!");
+    }
+
+    Object.assign(product, updateData);
+
+    const updatedProduct = await product.save();
 
     if (!updatedProduct) {
       throw new HttpError(404, "Product not found");
@@ -133,11 +187,26 @@ class ProductController {
 
     const { productId } = req.params;
 
+    const product = await ProductService.findById(productId);
+    if (!product) {
+      throw new HttpError(404, "Product not found!");
+    }
+    const store = await StoreService.findById(product.storeId);
+
+    if (
+      store.sellerId.toString() !== req.user._id.toString() &&
+      req.user.role.toString() !== "Admin"
+    ) {
+      throw new HttpError(404, "Unauthorized!");
+    }
+
     const deletedProduct = await ProductService.findByIdAndDelete(productId);
 
     if (!deletedProduct) {
       throw new HttpError(404, "Product not found");
     }
+
+    await ProductVariantService.deleteMany({ productId });
 
     Logger.info(`Product deleted by productId: ${deletedProduct}`);
     Response(res).status(200).message("Product deleted by productId").send();

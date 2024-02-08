@@ -73,20 +73,36 @@ class ProductVariantController {
   };
 
   //@desc search attributes of a variant
-  //@route GET /api/productVariant/search
+  //@route GET /api/productVariant/product/:productId/search
   //@access public
   searchAttributes = async (req, res) => {
     Logger.info(`Request received: ${req.method} ${req.url}`);
 
-    const filters = req.query; // Search query parameters
+    const { productId } = req.params;
 
-    const variants = await ProductVariantService.searchAttributes(filters); //implement
+    const productVariants = await ProductVariantService.find({ productId });
 
-    Logger.info(`Product Variant attributes by search query: ${variants}`);
+    const filteredVariants = productVariants.filter((productVariant) => {
+      return productVariant.quantity > 0;
+    });
+
+    const attributes = filteredVariants.reduce((acc, productVariant) => {
+      productVariant.variant.forEach((item) => {
+        if (!acc[item.attribute]) {
+          acc[item.attribute] = [];
+        }
+        if (!acc[item.attribute].includes(item.value)) {
+          acc[item.attribute].push(item.value);
+        }
+      });
+      return acc;
+    }, {});
+
+    Logger.info(`Attributes found for productId ${productId}: ${attributes}`);
     Response(res)
       .status(200)
-      .message("Product Variant attributes by search query")
-      .body(variants)
+      .message(`Attributes found for productId ${productId}`)
+      .body(attributes)
       .send();
   };
 
@@ -105,7 +121,8 @@ class ProductVariantController {
       !Array.isArray(variant) ||
       !variant.length ||
       !quantity ||
-      !price
+      !price ||
+      !storeId
     ) {
       throw new HttpError(400, "Invalid request body");
     }
@@ -120,6 +137,13 @@ class ProductVariantController {
 
     if (!store) {
       throw new HttpError(404, "Store not found");
+    }
+
+    if (
+      store.sellerId.toString() !== req.user._id.toString() ||
+      store._id.toString() !== product.storeId.toString()
+    ) {
+      throw new HttpError(404, "Unauthorized!");
     }
 
     for (const variantItem of variant) {
@@ -168,11 +192,22 @@ class ProductVariantController {
     const { variantId } = req.params;
     const updateData = req.body;
 
-    const updatedVariant = await ProductVariantService.findByIdAndUpdate(
-      variantId,
-      updateData,
-      { new: true } // Return the updated document
-    );
+    const variant = await ProductVariantService.findById(variantId);
+    if (!variant) {
+      throw new HttpError(404, "Variant not found!");
+    }
+    const store = await StoreService.findById(variant.storeId);
+
+    if (
+      store.sellerId.toString() !== req.user._id.toString() &&
+      req.user.role.toString() !== "Admin"
+    ) {
+      throw new HttpError(404, "Unauthorized!");
+    }
+
+    Object.assign(variant, updateData);
+
+    const updatedVariant = await variant.save();
 
     if (!updatedVariant) {
       throw new HttpError(404, "Variant not found");
@@ -193,6 +228,19 @@ class ProductVariantController {
     Logger.info(`Request received: ${req.method} ${req.url}`);
 
     const { variantId } = req.params;
+
+    const variant = await ProductVariantService.findById(variantId);
+    if (!variant) {
+      throw new HttpError(404, "Variant not found!");
+    }
+    const store = await StoreService.findById(variant.storeId);
+
+    if (
+      store.sellerId.toString() !== req.user._id.toString() &&
+      req.user.role.toString() !== "Admin"
+    ) {
+      throw new HttpError(404, "Unauthorized!");
+    }
 
     const deletedVariant = await ProductVariantService.findByIdAndDelete(
       variantId

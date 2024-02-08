@@ -6,6 +6,7 @@ const { CartService } = require("../services/cart.service");
 const { ProductService } = require("../services/product.service");
 const { ServiceService } = require("../services/service.service");
 const { TicketService } = require("../services/ticket.service");
+const { ProductVariantService } = require("../services/productVariant.service");
 
 class CartController {
   //@desc get all cart items
@@ -24,8 +25,19 @@ class CartController {
       throw new HttpError(404, "Cart not found");
     }
 
+    if (
+      cart.userId.toString() !== req.user._id.toString() &&
+      req.user.role.toString() !== "Admin"
+    ) {
+      throw new HttpError(404, "Unauthorized!");
+    }
+
     Logger.info(`User's cart retrieved successfully`);
-    Response(res).status(200).message("User's cart retrieved successfully").body({ cart }).send();
+    Response(res)
+      .status(200)
+      .message("User's cart retrieved successfully")
+      .body({ cart })
+      .send();
   };
 
   //@desc add item to cart
@@ -37,7 +49,10 @@ class CartController {
     const { userId, itemType, itemId } = req.params;
 
     if (!["product", "service", "event"].includes(itemType)) {
-      throw new HttpError(400, "Invalid item type. Must be 'product', 'service', or 'event'");
+      throw new HttpError(
+        400,
+        "Invalid item type. Must be 'product', 'service', or 'event'"
+      );
     }
 
     // Fetch cart for the user
@@ -48,12 +63,21 @@ class CartController {
       cart = await CartService.create({ userId });
     }
 
+    if (userId.toString() !== req.user._id.toString()) {
+      throw new HttpError(404, "Unauthorized!");
+    }
+
     switch (itemType) {
       case "product":
         await this.addToProduct(cart, itemId, req.body.quantity, req.body.note);
         break;
       case "service":
-        await this.addToService(cart, itemId, req.body.additionalServices, req.body.note);
+        await this.addToService(
+          cart,
+          itemId,
+          req.body.additionalServices,
+          req.body.note
+        );
         break;
       case "event":
         await this.addToEvent(cart, itemId, req.body.quantity);
@@ -62,13 +86,21 @@ class CartController {
         throw new HttpError(400, "Invalid item type");
     }
 
+    await cart.save();
+
+    await CartService.calculateTotalAmount(cart._id);
+
     Logger.info(`Item added to the cart successfully`);
-    Response(res).status(200).message("Item added to the cart successfully").body().send();
+    Response(res)
+      .status(200)
+      .message("Item added to the cart successfully")
+      .body()
+      .send();
   };
 
   // Helper function to add a product to the cart
   async addToProduct(cart, productVariantId, quantity, note) {
-    const product = await ProductService.findById(productVariantId);
+    const product = await ProductVariantService.findById(productVariantId);
 
     if (!product) {
       throw new HttpError(404, "Product not found");
@@ -77,7 +109,7 @@ class CartController {
     cart.products.push({
       productVariantId,
       quantity,
-      note
+      note,
     });
 
     await cart.save();
@@ -94,7 +126,7 @@ class CartController {
     cart.services.push({
       serviceId,
       additionalServices,
-      note
+      note,
     });
 
     await cart.save();
@@ -133,10 +165,19 @@ class CartController {
       throw new HttpError(404, "Cart not found");
     }
 
+    if (
+      userCart.userId.toString() !== req.user._id.toString() &&
+      req.user.role.toString() !== "Admin"
+    ) {
+      throw new HttpError(404, "Unauthorized!");
+    }
+
     // Update the item based on itemType
     switch (itemType) {
       case "product":
-        const productIndex = userCart.products.findIndex((product) => product.productVariantId.toString() === itemId);
+        const productIndex = userCart.products.findIndex(
+          (product) => product.productVariantId.toString() === itemId
+        );
         if (productIndex !== -1) {
           if (quantity !== undefined) {
             userCart.products[productIndex].quantity = quantity;
@@ -147,7 +188,9 @@ class CartController {
         }
         break;
       case "service":
-        const serviceIndex = userCart.services.findIndex((service) => service.serviceId.toString() === itemId);
+        const serviceIndex = userCart.services.findIndex(
+          (service) => service.serviceId.toString() === itemId
+        );
         if (serviceIndex !== -1) {
           if (quantity !== undefined) {
             userCart.services[serviceIndex].quantity = quantity;
@@ -158,7 +201,9 @@ class CartController {
         }
         break;
       case "event":
-        const eventIndex = userCart.events.findIndex((event) => event.ticketId.toString() === itemId);
+        const eventIndex = userCart.events.findIndex(
+          (event) => event.ticketId.toString() === itemId
+        );
         if (eventIndex !== -1) {
           if (quantity !== undefined) {
             userCart.events[eventIndex].quantity = quantity;
@@ -171,9 +216,14 @@ class CartController {
 
     // Save the updated cart
     await userCart.save();
+    await CartService.calculateTotalAmount(userCart);
 
     Logger.info(`Item updated in the user's cart successfully`);
-    Response(res).status(200).message("Item updated in the user's cart successfully").body().send();
+    Response(res)
+      .status(200)
+      .message("Item updated in the user's cart successfully")
+      .body()
+      .send();
   };
 
   //@desc remove item from user's cart by cartId, itemType, and itemId
@@ -190,21 +240,38 @@ class CartController {
       throw new HttpError(404, "Cart not found");
     }
 
+    if (
+      userCart.userId.toString() !== req.user._id.toString() &&
+      req.user.role.toString() !== "Admin"
+    ) {
+      throw new HttpError(404, "Unauthorized!");
+    }
+
     switch (itemType) {
       case "product":
-        userCart.products = userCart.products.filter((product) => product.productVariantId.toString() !== itemId);
+        userCart.products = userCart.products.filter(
+          (product) => product.productVariantId.toString() !== itemId
+        );
         break;
       case "service":
-        userCart.services = userCart.services.filter((service) => service.serviceId.toString() !== itemId);
+        userCart.services = userCart.services.filter(
+          (service) => service.serviceId.toString() !== itemId
+        );
         break;
       case "event":
-        userCart.events = userCart.events.filter((event) => event.ticketId.toString() !== itemId);
+        userCart.events = userCart.events.filter(
+          (event) => event.ticketId.toString() !== itemId
+        );
         break;
       default:
         throw new HttpError(400, "Invalid item type");
     }
 
+    userCart.offerApplied = null;
+    userCart.couponDiscountedAmount = 0;
+    userCart.totalAmount = 0;
     await userCart.save();
+    await CartService.calculateTotalAmount(userCart);
 
     Logger.info(`Item removed successfully from the cart`);
     Response(res).status(200).message("Item removed successfully").send();
@@ -227,7 +294,7 @@ class CartController {
     }
 
     Logger.info(`Cart deleted:`);
-    Response(res).status(200).message('Cart deleted').body().send();
+    Response(res).status(200).message("Cart deleted").body().send();
   };
 }
 

@@ -3,7 +3,7 @@ const express = require("express");
 const morgan = require("morgan"); // for consoling api request calls
 const helmet = require("helmet"); // secures connection by adding additional header
 const cors = require("cors"); // handling cors errors
-const cookieParser = require('cookie-parser');
+const cookieParser = require("cookie-parser");
 const ErrorHandler = require("../middlewares/error.middlewares"); // error handler for routes, since we will continue to next route upon request
 
 //logger
@@ -22,9 +22,12 @@ const { ReportRouter } = require("../routes/report.routes");
 const { PostRouter } = require("../routes/post.routes");
 const { OrderRouter } = require("../routes/order.routes");
 const { OfferRouter } = require("../routes/offer.routes");
+const { NotificationRouter } = require("../routes/notification.routes");
+const { ListRouter } = require("../routes/list.routes");
+const { FollowRouter } = require("../routes/follow.routes");
+const { CartRouter } = require("../routes/cart.routes");
 const { CommentRouter } = require("../routes/comment.routes");
 const { AddressRouter } = require("../routes/address.routes");
-
 
 module.exports = (app) => {
   app.use(express.json({ limit: "9999000009mb" })); // body parser, parses request body
@@ -47,9 +50,12 @@ module.exports = (app) => {
   app.use("/api/post", PostRouter);
   app.use("/api/order", OrderRouter);
   app.use("/api/offer", OfferRouter);
+  app.use("/api/notification", NotificationRouter);
+  app.use("/api/list", ListRouter);
+  app.use("/api/follow", FollowRouter);
+  app.use("/api/cart", CartRouter);
   app.use("/api/comment", CommentRouter);
   app.use("/api/address", AddressRouter);
-
 
   //handling async errors in apis
   app.use(ErrorHandler);

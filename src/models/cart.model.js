@@ -47,15 +47,7 @@ const schema = new mongoose.Schema(
       },
     ],
     offerApplied: {
-      product: {
-        type: mongoose.Schema.Types.ObjectId,
-      },
-      services: {
-        type: mongoose.Schema.Types.ObjectId,
-      },
-      event: {
-        type: mongoose.Schema.Types.ObjectId,
-      },
+      type: mongoose.Schema.Types.ObjectId,
     },
     originalTotalPrice: {
       product: {
@@ -68,39 +60,20 @@ const schema = new mongoose.Schema(
         type: Number,
       },
     },
-    discountedTotalPrice: {
-      product: {
-        type: Number,
-      },
-      services: {
-        type: Number,
-      },
-      event: {
-        type: Number,
-      },
-    },
-    couponDiscountedPrice: {
-      product: {
-        type: Number,
-      },
-      services: {
-        type: Number,
-      },
-      event: {
-        type: Number,
-      },
+    couponDiscountedAmount: {
+      type: Number,
     },
     platformFee: {
       type: Number,
-      default: 0.99
+      default: 0.99,
     },
     shippingFee: {
       type: Number,
-      default: 2.99
+      default: 2.99,
     },
     totalAmount: {
       type: Number,
-    }
+    },
   },
   {
     timestamps: true,

@@ -57,6 +57,12 @@ class StoreController {
       throw new HttpError(400, "User does not exist!");
     }
 
+    const store = await StoreService.find({ sellerId });
+
+    if (store) {
+      throw new HttpError(400, "Seller already has a store!");
+    }
+
     const sellerStore = await StoreService.create({
       ...req.body,
       sellerId,

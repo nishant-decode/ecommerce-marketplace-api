@@ -4,6 +4,7 @@ const HttpError = require("../helpers/httpError.helpers");
 const Response = require("../helpers/response.helpers");
 const Logger = require("../helpers/logger.helpers");
 const { sendNotification } = require("../helpers/notification.helper");
+const { ReviewService } = require("../services/review.service");
 
 class CommentController {
   //@desc get comments by category
@@ -49,6 +50,12 @@ class CommentController {
     comment.likes.push(req.user._id);
     await comment.save();
 
+    await sendNotification(
+      comment.userId,
+      "Comment",
+      `${req.user.name.first} liked your comment ${comment.content}.`
+    );
+
     Logger.info(`Comment liked:`);
     Response(res).status(200).message("Comment liked").body().send();
   };
@@ -70,7 +77,21 @@ class CommentController {
       categoryId,
     });
 
-    sendNotification();
+    if (category == "Review") {
+      const user = await ReviewService.findById(categoryId).userId;
+      await sendNotification(
+        user.userId,
+        "Comment",
+        `${req.user.name.first} commented on your ${category}.`
+      );
+    } else if (category == "Comment") {
+      const user = await CommentService.findById(categoryId).userId;
+      await sendNotification(
+        user.userId,
+        "Comment",
+        `${req.user.name.first} replied to your ${category}.`
+      );
+    }
 
     Logger.info("Comment added successfully");
     Response(res).status(201).body({ comment }).send();
@@ -83,14 +104,24 @@ class CommentController {
     Logger.info(`Request received: ${req.method} ${req.url}`);
 
     const { commentId } = req.params;
-    const { content } = req.body;
+    const updateData = req.body;
 
     // Update comment logic
-    const updatedComment = await CommentService.findByIdAndUpdate(
-      commentId,
-      { content },
-      { new: true }
-    );
+    const comment = await CommentService.findById(commentId);
+    if (!comment) {
+      throw new HttpError(404, "Comment not found!");
+    }
+
+    if (
+      comment.userId.toString() !== req.user._id.toString() &&
+      req.user.role.toString() !== "Admin"
+    ) {
+      throw new HttpError(404, "Unauthorized!");
+    }
+
+    Object.assign(comment, updateData);
+
+    const updatedComment = await comment.save();
 
     Logger.info(`Comment updated:`);
     Response(res)
@@ -137,6 +168,18 @@ class CommentController {
     Logger.info(`Request received: ${req.method} ${req.url}`);
 
     const { commentId } = req.params;
+
+    const comment = await CommentService.findById(commentId);
+    if (!comment) {
+      throw new HttpError(404, "Comment not found!");
+    }
+
+    if (
+      comment.userId.toString() !== req.user._id.toString() &&
+      req.user.role.toString() !== "Admin"
+    ) {
+      throw new HttpError(404, "Unauthorized!");
+    }
 
     // Delete comment logic
     await CommentService.findByIdAndDelete(commentId);

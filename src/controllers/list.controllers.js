@@ -10,15 +10,11 @@ class ListController {
   //@access public
   getAllLists = async (req, res) => {
     Logger.info(`Request received: ${req.method} ${req.url}`);
-  
+
     const lists = await ListService.find({});
-  
+
     Logger.info(`All lists: ${lists}`);
-    Response(res)
-      .status(200)
-      .message("All lists")
-      .body(lists)
-      .send();
+    Response(res).status(200).message("All lists").body(lists).send();
   };
 
   //@desc get list
@@ -27,28 +23,27 @@ class ListController {
   getList = async (req, res) => {
     Logger.info(`Request received: ${req.method} ${req.url}`);
 
-    const list = await ListService.findById(listId);
-      
+    const list = await ListService.findById(req.params.listId);
+
     if (!list) {
       return HttpError(res, 404, "List not found");
     }
-  
+
     Logger.info(`List: ${list}`);
-    Response(res)
-      .status(200)
-      .message("List")
-      .body(list)
-      .send();
+    Response(res).status(200).message("List").body(list).send();
   };
 
   //@desc search lists by search query
-  //@route GET /api/list/search
+  //@route GET /api/list/creator/:creatorId
   //@access public
   searchLists = async (req, res) => {
     Logger.info(`Request received: ${req.method} ${req.url}`);
 
-    const lists = await ListService.find({});
-  
+    const { creatorId } = req.params;
+
+    // Find lists using the filter
+    const lists = await ListService.find({ creatorId });
+
     Logger.info(`Lists found by search query: ${lists}`);
     Response(res)
       .status(200)
@@ -63,16 +58,20 @@ class ListController {
   createList = async (req, res) => {
     Logger.info(`Request received: ${req.method} ${req.url}`);
 
-    const { name, creatorId, status, listings, description, keywords } = req.body;
+    const { name, status, listings, description, keywords } = req.body;
 
-    if (!name || !creatorId || !status || !listings || !description || !keywords) {
+    if (!name || !status || !listings || !description || !keywords) {
       Logger.error("Invalid request body");
       return Response(res).status(400).message("Invalid request body").send();
     }
 
-    const newList = new ListService.create({
+    if (req.params.userId.toString() !== req.user._id.toString()) {
+      throw new HttpError(404, "Unauthorized!");
+    }
+
+    const newList = await ListService.create({
       name,
-      creatorId,
+      creatorId: req.params.userId,
       status,
       listings,
       description,
@@ -80,7 +79,7 @@ class ListController {
     });
 
     Logger.info(`List created:`);
-    Response(res).status(200).message("List created").body().send();
+    Response(res).status(200).message("List created").body({ newList }).send();
   };
 
   //@desc update list
@@ -89,18 +88,25 @@ class ListController {
   updateList = async (req, res) => {
     Logger.info(`Request received: ${req.method} ${req.url}`);
 
-    const updatedList = await ListService.findByIdAndUpdate(listId, req.body, { new: true });
-  
+    const list = await ListService.findById(req.params.listId);
+
+    if (
+      list.creatorId.toString() !== req.user._id.toString() &&
+      req.user.role.toString() !== "Admin"
+    ) {
+      throw new HttpError(404, "Unauthorized!");
+    }
+
+    Object.assign(list, req.body);
+
+    const updatedList = await list.save();
+
     if (!updatedList) {
       return HttpError(res, 404, "List not found");
     }
-  
+
     Logger.info(`List updated: ${updatedList}`);
-    Response(res)
-      .status(200)
-      .message("List updated")
-      .body(updatedList)
-      .send();
+    Response(res).status(200).message("List updated").body(updatedList).send();
   };
 
   //@desc delete list
@@ -109,20 +115,24 @@ class ListController {
   deleteList = async (req, res) => {
     Logger.info(`Request received: ${req.method} ${req.url}`);
 
-    const deletedList = await ListService.findByIdAndDelete(listId);
-  
+    const list = await ListService.findById(req.params.listId);
+
+    if (
+      list.creatorId.toString() !== req.user._id.toString() &&
+      req.user.role.toString() !== "Admin"
+    ) {
+      throw new HttpError(404, "Unauthorized!");
+    }
+
+    const deletedList = await ListService.findByIdAndDelete(req.params.listId);
+
     if (!deletedList) {
       return HttpError(res, 404, "List not found");
     }
-  
-    Logger.info(`List deleted: ${deletedList}`);
-    Response(res)
-      .status(200)
-      .message("List deleted")
-      .body(deletedList)
-      .send();
-  };
 
+    Logger.info(`List deleted: ${deletedList}`);
+    Response(res).status(200).message("List deleted").body(deletedList).send();
+  };
 }
 
 module.exports.ListController = new ListController();

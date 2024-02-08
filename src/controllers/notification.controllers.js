@@ -10,7 +10,7 @@ class NotificationController {
   //@access private
   getAllNotifications = async (req, res) => {
     Logger.info(`Request received: ${req.method} ${req.url}`);
-  
+
     const notifications = await NotificationService.find({});
 
     Logger.info(`All notifications: ${notifications}`);
@@ -44,20 +44,33 @@ class NotificationController {
   };
 
   //@desc search notifications by search query
-  //@route GET /api/notification/search
+  //@route GET /api/notification/user/:userId/:category
   //@access private
-  searchNotifications = async (req, res) => {
+  searchUserNotifications = async (req, res) => {
     Logger.info(`Request received: ${req.method} ${req.url}`);
 
-    const searchQuery = req.query.q;
+    const { userId, category } = req.params;
 
-    const foundNotifications = await NotificationService.find({ message: { $regex: searchQuery, $options: "i" } });
+    if (!userId || !category) {
+      throw new HttpError(400, "User ID and category are required");
+    }
 
-    Logger.info(`Notifications found by search query: ${foundNotifications}`);
+    if (
+      userId.toString() !== req.user._id.toString() &&
+      req.user.role.toString() !== "Admin"
+    ) {
+      throw new HttpError(404, "Unauthorized!");
+    }
+
+    const notifications = await NotificationService.find({ userId, category });
+
+    Logger.info(
+      `Notifications found for user ${userId} in category ${category}: ${notifications}`
+    );
     Response(res)
       .status(200)
-      .message("Notifications found by search query")
-      .body({ foundNotifications })
+      .message(`Notifications found for user ${userId} in category ${category}`)
+      .body({ notifications })
       .send();
   };
 
@@ -67,15 +80,19 @@ class NotificationController {
   createNotification = async (req, res) => {
     Logger.info(`Request received: ${req.method} ${req.url}`);
 
-    const { category, userId, message, url } = req.body;
+    const { category, userId, message } = req.body;
 
     // Validate required fields
-    if (!category || !userId || !message || !url) {
+    if (!category || !userId || !message) {
       throw new HttpError(400, "Missing required fields");
     }
 
     // Create notification
-    const notification = await NotificationService.create({ category, userId, message, url });
+    const notification = await NotificationService.create({
+      category,
+      userId,
+      message,
+    });
 
     Logger.info(`Notification created: ${notification}`);
     Response(res)
@@ -92,26 +109,30 @@ class NotificationController {
     Logger.info(`Request received: ${req.method} ${req.url}`);
 
     const notificationId = req.params.notificationId;
-    const { category, userId, message, url } = req.body;
+    const { category, userId, message } = req.body;
 
     // Validate required fields
-    if (!category || !userId || !message || !url) {
+    if (!category || !userId || !message) {
       throw new HttpError(400, "Missing required fields");
     }
 
     // Check if notification exists
-    const notificationExists = await NotificationService.exists({ _id: notificationId });
+    const notificationExists = await NotificationService.exists({
+      _id: notificationId,
+    });
     if (!notificationExists) {
       throw new HttpError(404, "Notification not found");
     }
 
     // Update notification
-    const updatedNotification = await NotificationService.findByIdAndUpdate(notificationId, {
-      category,
-      userId,
-      message,
-      url,
-    });
+    const updatedNotification = await NotificationService.findByIdAndUpdate(
+      notificationId,
+      {
+        category,
+        userId,
+        message,
+      }
+    );
 
     Logger.info(`Notification updated: ${updatedNotification}`);
     Response(res)
@@ -130,13 +151,17 @@ class NotificationController {
     const notificationId = req.params.notificationId;
 
     // Check if notification exists
-    const notificationExists = await NotificationService.exists({ _id: notificationId });
+    const notificationExists = await NotificationService.exists({
+      _id: notificationId,
+    });
     if (!notificationExists) {
       throw new HttpError(404, "Notification not found");
     }
 
     // Delete notification
-    const deletedNotification = await NotificationService.findByIdAndDelete(notificationId);
+    const deletedNotification = await NotificationService.findByIdAndDelete(
+      notificationId
+    );
 
     Logger.info(`Notification deleted: ${deletedNotification}`);
     Response(res)
@@ -145,7 +170,6 @@ class NotificationController {
       .body({ deletedNotification })
       .send();
   };
-
 }
 
 module.exports.NotificationController = new NotificationController();
